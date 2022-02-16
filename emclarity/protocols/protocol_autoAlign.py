@@ -30,16 +30,29 @@
 Describe your python module here:
 This module will provide the traditional Hello world example
 """
-from pyworkflow.protocol import Protocol, params, Integer
-from pyworkflow.utils import Message
+import os
+
+from pyworkflow.protocol import Protocol
+
+import imod.utils as utils
+import numpy as np
+import pwem.objects as data
+from pwem.objects import Transform
+from pyworkflow import BETA
+from pyworkflow.object import Set
+import pyworkflow.protocol.params as params
+import tomo.objects as tomoObj
+from imod import Plugin
+from pwem.emlib.image import ImageHandler
+from imod.protocols.protocol_base import ProtImodBase
 
 
-class EmclarityPrefixHelloWorld(Protocol):
+class EmclarityAutoAlign(Protocol):
     """
     This protocol will print hello world in the console
     IMPORTANT: Classes names should be unique, better prefix them
     """
-    _label = 'Hello world'
+    _label = 'autoAlign'
 
     # -------------------------- DEFINE param functions ----------------------
     def _defineParams(self, form):
@@ -48,11 +61,13 @@ class EmclarityPrefixHelloWorld(Protocol):
             form: this is the form to be populated with sections and params.
         """
         # You need a params to belong to a section:
-        form.addSection(label=Message.LABEL_INPUT)
-        form.addParam('message', params.StringParam,
-                      default='Hello world!',
-                      label='Message', important=True,
-                      help='What will be printed in the console.')
+        form.addSection('Input')
+
+        form.addParam('inputSetOfTiltSeries',
+                      params.PointerParam,
+                      pointerClass='SetOfTiltSeries',
+                      important=True,
+                      label='Input set of tilt-series.')
 
         form.addParam('times', params.IntParam,
                       default=10,
