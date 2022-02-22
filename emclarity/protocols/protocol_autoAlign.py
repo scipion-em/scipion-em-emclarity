@@ -156,8 +156,11 @@ class EmclarityAutoAlign(Protocol):
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
         # Insert processing steps
-        self._insertFunctionStep('greetingsStep')
-        self._insertFunctionStep('createOutputStep')
+        # self._insertFunctionStep('greetingsStep')
+        # self._insertFunctionStep('createOutputStep')
+
+        for ts in self.inputSetOfTiltSeries.get():
+            pass
 
     def greetingsStep(self):
         # say what the parameter says!!
