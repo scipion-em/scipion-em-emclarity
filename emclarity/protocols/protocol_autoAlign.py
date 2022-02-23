@@ -69,86 +69,74 @@ class EmclarityAutoAlign(Protocol):
                       important=True,
                       label='Input set of tilt-series.')
 
-        form.addParam('beadDiameter', params.IntParam,
+        form.addParam('beadDiameter', params.FloatParam,
                       default=10,
                       important=True,
                       label='Bead diameter',
-                      help='')
+                      help='Bead diameter in meters (e.g. 10e-9). If 0, the beads are ignored during the alignment')
 
-        form.addParam('autoAli_max_resolution', params.IntParam,
+        form.addParam('autoAli_max_resolution', params.FloatParam,
                       default=18,
-                      allowsNull=True,
-                      label='autoAli_max_resolution',
+                      label='Max Resolution',
                       help='Low-pass cutoff, in Å, used in alignment')
 
-        form.addParam('autoAli_min_sampling_rate', params.IntParam,
+        form.addParam('autoAli_min_sampling_rate', params.FloatParam,
                       default=10,
-                      allowsNull=True,
-                      label='autoAli_min_sampling_rate',
+                      label='Min sampling rate',
                       help='Maximum pixel size used for alignment, in Å per pixel')
 
-        form.addParam('autoAli_max_sampling_rate', params.IntParam,
+        form.addParam('autoAli_max_sampling_rate', params.FloatParam,
                       default=3,
-                      allowsNull=True,
-                      label='autoAli_max_sampling_rate',
+                      label='Max sampling rate',
                       help='Minimum pixel size used for alignment, in Å per pixel')
 
-        form.addParam('autoAli_iterations_per_bin', params.IntParam,
+        form.addParam('autoAli_iterations_per_bin', params.FloatParam,
                       default=3,
-                      allowsNull=True,
-                      label='autoAli_iterations_per_bin',
+                      label='Iterations per bin',
                       help='The number of patch tracking iterations, for each bin')
 
-        form.addParam('autoAli_n_iters_no_rotation', params.IntParam,
+        form.addParam('autoAli_n_iters_no_rotation', params.FloatParam,
                       default=3,
-                      allowsNull=True,
-                      label='autoAli_n_iters_no_rotation',
+                      label='n iters no rotation',
                       help='The number of patch tracking iterations, for each bin,'
                            'before activating local alignments')
 
-        form.addParam('autoAli_patch_size_factor', params.IntParam,
+        form.addParam('autoAli_patch_size_factor', params.FloatParam,
                       default=4,
-                      allowsNull=True,
-                      label='autoAli_patch_size_factor',
+                      label='Patch size factor',
                       help='Sets the size of the patches used for patch tracking.'
                            'Making this larger will result in more patches, and more local areas in later iterations,'
                            'but may also decrease accuracy')
 
-        form.addParam('autoAli_patch_tracking_border', params.IntParam,
+        form.addParam('autoAli_patch_tracking_border', params.FloatParam,
                       default=64,
-                      allowsNull=True,
-                      label='autoAli_patch_tracking_border',
+                      label='Patch tracking border',
                       help='Number of pixels to trim off each edge in X and in Y')
 
-        form.addParam('autoAli_patch_tracking_border', params.IntParam,
+        form.addParam('autoAli_patch_tracking_border', params.FloatParam,
                       default=64,
-                      allowsNull=True,
-                      label='autoAli_patch_tracking_border',
+                      label='Patch tracking border',
                       help='Number of pixels to trim off each edge in X and in Y')
 
         form.addParam('autoAli_patch_overlap', params.FloatParam,
                       default=0.5,
-                      allowsNull=True,
-                      label='autoAli_patch_overlap',
+                      label='Patch overlap',
                       help='Fractional overlap in X and Y between patches that are tracked by correlation.'
                            'This influences the number of patches')
 
-        form.addParam('autoAli_max_shift_in_angstroms', params.IntParam,
+        form.addParam('autoAli_max_shift_in_angstroms', params.FloatParam,
                       default=40,
-                      allowsNull=True,
-                      label='autoAli_max_shift_in_angstroms',
+                      label='Max shift in angstroms',
                       help='Maximum shifts allowed, in Å, for the patch tracking alignment')
 
-        form.addParam('autoAli_max_shift_factor', params.IntParam,
+        form.addParam('autoAli_max_shift_factor', params.FloatParam,
                       default=1,
-                      allowsNull=True,
-                      label='autoAli_max_shift_factor',
+                      label='Max shift factor',
                       help='The maximum shifts allowed are progressively reduced with the iterations i')
 
         form.addParam('autoAli_refine_on_beads', params.BooleanParam,
                       default=False,
-                      allowsNull=True,
-                      label='autoAli_refine_on_beads',
+                      label='Refine on beads',
                       help='Whether or not the patch tracking alignment should be refined using the gold beads.'
                            'This refinement makes the alignment significantly slower, but can substantially '
                            'improve the quality of the alignment')
@@ -156,19 +144,58 @@ class EmclarityAutoAlign(Protocol):
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
         # Insert processing steps
-        # self._insertFunctionStep('greetingsStep')
-        # self._insertFunctionStep('createOutputStep')
+        self._insertFunctionStep(self.autoAlignStep)
+        self._insertFunctionStep(self.createOutputStep)
 
         for ts in self.inputSetOfTiltSeries.get():
-            pass
+        #     self._insertFunctionStep(self.convertInputStep, ts.getObjId())
+            self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
+        #     self._insertFunctionStep(self.generateOutputStackStep, ts.getObjId())
+        #     if self.computeAlignment.get() == 0:
+        #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
+        # self._insertFunctionStep(self.closeOutputSetsStep)
 
-    def greetingsStep(self):
-        # say what the parameter says!!
+    def autoAlignStep(self):
+        """Compute transformation matrix for each tilt series"""
+        ts = self.inputSetOfTiltSeries.get()[tsObjId]
+        tsId = ts.getTsId()
+        extraPrefix = self._getExtraPath(tsId)
+        tmpPrefix = self._getTmpPath(tsId)
 
-        for time in range(0, self.times.get()):
-            print(self.message)
+        paramsXcorr = {
+            'input': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName()),
+            'output': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
+            'tiltfile': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName(extension=".tlt")),
+            'rotationAngle': ts.getAcquisition().getTiltAxisAngle(),
+            'filterSigma1': self.filterSigma1.get(),
+            'filterSigma2': self.filterSigma2.get(),
+            'filterRadius1': self.filterRadius1.get(),
+            'filterRadius2': self.filterRadius2.get()
+        }
 
-    def createOutputStep(self):
+        argsXcorr = "-input %(input)s " \
+                    "-output %(output)s " \
+                    "-tiltfile %(tiltfile)s " \
+                    "-RotationAngle %(rotationAngle).2f " \
+                    "-FilterSigma1 %(filterSigma1)f " \
+                    "-FilterSigma2 %(filterSigma2)f " \
+                    "-FilterRadius1 %(filterRadius1)f " \
+                    "-FilterRadius2 %(filterRadius2)f "
+
+        if self.cumulativeCorr == 0:
+            argsXcorr += " -CumulativeCorrelation "
+
+        Plugin.runImod(self, 'tiltxcorr', argsXcorr % paramsXcorr)
+
+        paramsXftoxg = {
+            'input': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
+            'goutput': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexg")),
+        }
+        argsXftoxg = "-input %(input)s " \
+                     "-goutput %(goutput)s"
+        Plugin.runImod(self, 'xftoxg', argsXftoxg % paramsXftoxg)
+
+    def generateOutputStackStep(self):
         # register how many times the message has been printed
         # Now count will be an accumulated value
         timesPrinted = Integer(self.times.get() + self.previousCount.get())
