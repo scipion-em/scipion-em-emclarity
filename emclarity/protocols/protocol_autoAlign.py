@@ -113,11 +113,6 @@ class EmclarityAutoAlign(Protocol):
                       label='Patch tracking border',
                       help='Number of pixels to trim off each edge in X and in Y')
 
-        form.addParam('autoAli_patch_tracking_border', params.FloatParam,
-                      default=64,
-                      label='Patch tracking border',
-                      help='Number of pixels to trim off each edge in X and in Y')
-
         form.addParam('autoAli_patch_overlap', params.FloatParam,
                       default=0.5,
                       label='Patch overlap',
@@ -148,7 +143,7 @@ class EmclarityAutoAlign(Protocol):
         self._insertFunctionStep(self.createOutputStep)
 
         for ts in self.inputSetOfTiltSeries.get():
-        #     self._insertFunctionStep(self.convertInputStep, ts.getObjId())
+            #     self._insertFunctionStep(self.convertInputStep, ts.getObjId())
             self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
         #     self._insertFunctionStep(self.generateOutputStackStep, ts.getObjId())
         #     if self.computeAlignment.get() == 0:
@@ -162,30 +157,42 @@ class EmclarityAutoAlign(Protocol):
         extraPrefix = self._getExtraPath(tsId)
         tmpPrefix = self._getTmpPath(tsId)
 
-        paramsXcorr = {
+        paramsAutoAlign = {
             'input': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName()),
             'output': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
             'tiltfile': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName(extension=".tlt")),
             'rotationAngle': ts.getAcquisition().getTiltAxisAngle(),
-            'filterSigma1': self.filterSigma1.get(),
-            'filterSigma2': self.filterSigma2.get(),
-            'filterRadius1': self.filterRadius1.get(),
-            'filterRadius2': self.filterRadius2.get()
+            'beadDiameter': self.beadDiameter.get(),
+            'autoAli_max_resolution': self.autoAli_max_resolution.get(),
+            'autoAli_min_sampling_rate': self.autoAli_min_sampling_rate.get(),
+            'autoAli_max_sampling_rate': self.autoAli_max_sampling_rate.get(),
+            'autoAli_iterations_per_bin': self.autoAli_iterations_per_bin.get(),
+            'autoAli_n_iters_no_rotation': self.autoAli_n_iters_no_rotation.get(),
+            'autoAli_patch_tracking_border': self.autoAli_patch_tracking_border.get(),
+            'autoAli_max_shift_in_angstroms': self.autoAli_max_shift_in_angstroms.get(),
+            'autoAli_max_shift_factor': self.autoAli_max_shift_factor.get(),
+            'autoAli_refine_on_beads': self.autoAli_refine_on_beads.get()
         }
 
-        argsXcorr = "-input %(input)s " \
+        argsAutoAlign = "-input %(input)s " \
                     "-output %(output)s " \
                     "-tiltfile %(tiltfile)s " \
                     "-RotationAngle %(rotationAngle).2f " \
-                    "-FilterSigma1 %(filterSigma1)f " \
-                    "-FilterSigma2 %(filterSigma2)f " \
-                    "-FilterRadius1 %(filterRadius1)f " \
-                    "-FilterRadius2 %(filterRadius2)f "
+                    "-beadDiameter %(beadDiameter)f " \
+                    "-autoAli_max_resolution %(autoAli_max_resolution)f " \
+                    "-autoAli_min_sampling_rate %(autoAli_min_sampling_rate)f " \
+                    "-autoAli_max_sampling_rate %(autoAli_max_sampling_rate)f " \
+                    "-autoAli_iterations_per_bin %(autoAli_iterations_per_bin)f " \
+                    "-autoAli_n_iters_no_rotation %(autoAli_n_iters_no_rotation)f " \
+                    "-autoAli_patch_tracking_border %(autoAli_patch_tracking_border)f " \
+                    "-autoAli_max_shift_in_angstroms %(autoAli_max_shift_in_angstroms)f " \
+                    "-autoAli_max_shift_factor %(autoAli_max_shift_factor)f " \
+                    "-autoAli_refine_on_beads %(autoAli_refine_on_beads)f "
 
         if self.cumulativeCorr == 0:
-            argsXcorr += " -CumulativeCorrelation "
+            argsAutoAlign += " -CumulativeCorrelation "
 
-        Plugin.runImod(self, 'tiltxcorr', argsXcorr % paramsXcorr)
+        Plugin.runImod(self, 'tiltxcorr', argsAutoAlign % paramsAutoAlign)
 
         paramsXftoxg = {
             'input': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
@@ -196,10 +203,55 @@ class EmclarityAutoAlign(Protocol):
         Plugin.runImod(self, 'xftoxg', argsXftoxg % paramsXftoxg)
 
     def generateOutputStackStep(self):
-        # register how many times the message has been printed
-        # Now count will be an accumulated value
-        timesPrinted = Integer(self.times.get() + self.previousCount.get())
-        self._defineOutputs(count=timesPrinted)
+        # TO DO ADAPT FUNCTION FROM XCORR
+        """ Generate tilt-serie with the associated transform matrix """
+        ts = self.inputSetOfTiltSeries.get()[tsObjId]
+        tsId = ts.getTsId()
+
+        extraPrefix = self._getExtraPath(tsId)
+
+        self.getOutputSetOfTiltSeries(self.inputSetOfTiltSeries.get())
+
+        alignmentMatrix = utils.formatTransformationMatrix(
+            os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexg")))
+
+        newTs = tomoObj.TiltSeries(tsId=tsId)
+        newTs.copyInfo(ts)
+
+        self.outputSetOfTiltSeries.append(newTs)
+
+        for index, tiltImage in enumerate(ts):
+            newTi = tomoObj.TiltImage()
+            newTi.copyInfo(tiltImage, copyId=True, copyTM=False)
+
+            if tiltImage.hasTransform():
+                transform = Transform()
+                previousTransform = tiltImage.getTransform().getMatrix()
+                newTransform = alignmentMatrix[:, :, index]
+                previousTransformArray = np.array(previousTransform)
+                newTransformArray = np.array(newTransform)
+                outputTransformMatrix = np.matmul(newTransformArray, previousTransformArray)
+                transform.setMatrix(outputTransformMatrix)
+                newTi.setTransform(transform)
+
+            else:
+                transform = Transform()
+                newTransform = alignmentMatrix[:, :, index]
+                newTransformArray = np.array(newTransform)
+                transform.setMatrix(newTransformArray)
+                newTi.setTransform(transform)
+
+            newTi.setAcquisition(tiltImage.getAcquisition())
+            newTi.setLocation(tiltImage.getLocation())
+
+            newTs.append(newTi)
+
+        newTs.write(properties=False)
+
+        self.outputSetOfTiltSeries.update(newTs)
+        self.outputSetOfTiltSeries.write()
+
+        self._store()
 
     # --------------------------- INFO functions -----------------------------------
     def _summary(self):
