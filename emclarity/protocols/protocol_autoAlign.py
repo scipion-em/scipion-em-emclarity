@@ -138,10 +138,6 @@ class EmclarityAutoAlign(Protocol):
 
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
-        # Insert processing steps
-        self._insertFunctionStep(self.autoAlignStep)
-        self._insertFunctionStep(self.createOutputStep)
-
         for ts in self.inputSetOfTiltSeries.get():
             #     self._insertFunctionStep(self.convertInputStep, ts.getObjId())
             self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
@@ -150,57 +146,30 @@ class EmclarityAutoAlign(Protocol):
         #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
         # self._insertFunctionStep(self.closeOutputSetsStep)
 
-    def autoAlignStep(self):
+    def autoAlignStep(self, tsObjId):
         """Compute transformation matrix for each tilt series"""
+        param_file = self.create_parameters_file()
         ts = self.inputSetOfTiltSeries.get()[tsObjId]
         tsId = ts.getTsId()
         extraPrefix = self._getExtraPath(tsId)
         tmpPrefix = self._getTmpPath(tsId)
 
         paramsAutoAlign = {
-            'input': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName()),
-            'output': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
-            'tiltfile': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName(extension=".tlt")),
-            'rotationAngle': ts.getAcquisition().getTiltAxisAngle(),
-            'beadDiameter': self.beadDiameter.get(),
-            'autoAli_max_resolution': self.autoAli_max_resolution.get(),
-            'autoAli_min_sampling_rate': self.autoAli_min_sampling_rate.get(),
-            'autoAli_max_sampling_rate': self.autoAli_max_sampling_rate.get(),
-            'autoAli_iterations_per_bin': self.autoAli_iterations_per_bin.get(),
-            'autoAli_n_iters_no_rotation': self.autoAli_n_iters_no_rotation.get(),
-            'autoAli_patch_tracking_border': self.autoAli_patch_tracking_border.get(),
-            'autoAli_max_shift_in_angstroms': self.autoAli_max_shift_in_angstroms.get(),
-            'autoAli_max_shift_factor': self.autoAli_max_shift_factor.get(),
-            'autoAli_refine_on_beads': self.autoAli_refine_on_beads.get()
+            'param_file': param_file,
+            'stack': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName()),
+            'rawtlt': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
+            'rotationAngle': ts.getAcquisition().getTiltAxisAngle()
         }
 
+        # adaptarlos a los params
         argsAutoAlign = "-input %(input)s " \
                     "-output %(output)s " \
                     "-tiltfile %(tiltfile)s " \
                     "-RotationAngle %(rotationAngle).2f " \
-                    "-beadDiameter %(beadDiameter)f " \
-                    "-autoAli_max_resolution %(autoAli_max_resolution)f " \
-                    "-autoAli_min_sampling_rate %(autoAli_min_sampling_rate)f " \
-                    "-autoAli_max_sampling_rate %(autoAli_max_sampling_rate)f " \
-                    "-autoAli_iterations_per_bin %(autoAli_iterations_per_bin)f " \
-                    "-autoAli_n_iters_no_rotation %(autoAli_n_iters_no_rotation)f " \
-                    "-autoAli_patch_tracking_border %(autoAli_patch_tracking_border)f " \
-                    "-autoAli_max_shift_in_angstroms %(autoAli_max_shift_in_angstroms)f " \
-                    "-autoAli_max_shift_factor %(autoAli_max_shift_factor)f " \
-                    "-autoAli_refine_on_beads %(autoAli_refine_on_beads)f "
 
-        if self.cumulativeCorr == 0:
-            argsAutoAlign += " -CumulativeCorrelation "
 
-        Plugin.runImod(self, 'tiltxcorr', argsAutoAlign % paramsAutoAlign)
+        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign % paramsAutoAlign)
 
-        paramsXftoxg = {
-            'input': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
-            'goutput': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexg")),
-        }
-        argsXftoxg = "-input %(input)s " \
-                     "-goutput %(goutput)s"
-        Plugin.runImod(self, 'xftoxg', argsXftoxg % paramsXftoxg)
 
     def generateOutputStackStep(self):
         # TO DO ADAPT FUNCTION FROM XCORR
@@ -253,6 +222,8 @@ class EmclarityAutoAlign(Protocol):
 
         self._store()
 
+    def create_parameters_file(self):
+        pass
     # --------------------------- INFO functions -----------------------------------
     def _summary(self):
         """ Summarize what the protocol has done"""
