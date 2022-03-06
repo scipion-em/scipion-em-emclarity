@@ -63,11 +63,11 @@ class EmclarityAutoAlign(Protocol):
         # You need a params to belong to a section:
         form.addSection('Input')
 
-        form.addParam('inputSetOfTiltSeries',
-                      params.PointerParam,
-                      pointerClass='SetOfTiltSeries',
-                      important=True,
-                      label='Input set of tilt-series.')
+        # form.addParam('inputSetOfTiltSeries',
+        #               params.PointerParam,
+        #               pointerClass='SetOfTiltSeries',
+        #               important=True,
+        #               label='Input set of tilt-series.')
 
         form.addParam('beadDiameter', params.FloatParam,
                       default=10,
@@ -136,11 +136,12 @@ class EmclarityAutoAlign(Protocol):
                            'This refinement makes the alignment significantly slower, but can substantially '
                            'improve the quality of the alignment')
 
+
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
-        for ts in self.inputSetOfTiltSeries.get():
+        #for ts in self.inputSetOfTiltSeries.get():
             #     self._insertFunctionStep(self.convertInputStep, ts.getObjId())
-            self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
+            self._insertFunctionStep(self.autoAlignStep, None)
         #     self._insertFunctionStep(self.generateOutputStackStep, ts.getObjId())
         #     if self.computeAlignment.get() == 0:
         #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
@@ -162,10 +163,10 @@ class EmclarityAutoAlign(Protocol):
         }
 
         # adaptarlos a los params
-        argsAutoAlign = "-input %(input)s " \
-                    "-output %(output)s " \
-                    "-tiltfile %(tiltfile)s " \
-                    "-RotationAngle %(rotationAngle).2f " \
+        argsAutoAlign = "-param_file %(param_file)s " \
+                    "-stack %(stack)s " \
+                    "-rawtlt %(rawtlt)s " \
+                    "-rotationAngle %(rotationAngle).2f " \
 
 
         Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign % paramsAutoAlign)
@@ -174,7 +175,7 @@ class EmclarityAutoAlign(Protocol):
     def generateOutputStackStep(self):
         # TO DO ADAPT FUNCTION FROM XCORR
         """ Generate tilt-serie with the associated transform matrix """
-        ts = self.inputSetOfTiltSeries.get()[tsObjId]
+        ts = self.inputSetOfTiltSeries.get()
         tsId = ts.getTsId()
 
         extraPrefix = self._getExtraPath(tsId)
@@ -223,7 +224,23 @@ class EmclarityAutoAlign(Protocol):
         self._store()
 
     def create_parameters_file(self):
-        pass
+        #print(self.getParam('inputSetOfTiltSeries'))
+        f = open('params_file.txt', 'w')
+        #f.write('inputSetOfTiltSeries=' + self.inputSetOfTiltSeries)
+        f.write('beadDiameter=' + str(self.beadDiameter))
+        f.write('\nautoAli_max_resolution=' + str(self.autoAli_max_resolution))
+        f.write('\nautoAli_min_sampling_rate=' + str(self.autoAli_min_sampling_rate))
+        f.write('\nautoAli_max_sampling_rate=' + str(self.autoAli_max_sampling_rate))
+        f.write('\nautoAli_iterations_per_bin=' + str(self.autoAli_iterations_per_bin))
+        f.write('\nautoAli_n_iters_no_rotation=' + str(self.autoAli_n_iters_no_rotation))
+        f.write('\nautoAli_patch_size_factor=' + str(self.autoAli_patch_size_factor))
+        f.write('\nautoAli_patch_tracking_border=' + str(self.autoAli_patch_tracking_border))
+        f.write('\nautoAli_patch_overlap=' + str(self.autoAli_patch_overlap))
+        f.write('\nautoAli_max_shift_in_angstroms=' + str(self.autoAli_max_shift_in_angstroms))
+        f.write('\nautoAli_max_shift_factor=' + str(self.autoAli_max_shift_factor))
+        f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads))
+        f.close()
+        return f
     # --------------------------- INFO functions -----------------------------------
     def _summary(self):
         """ Summarize what the protocol has done"""
