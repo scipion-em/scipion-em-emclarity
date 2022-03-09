@@ -88,7 +88,7 @@ class Plugin(pwem.Plugin):
         return neededProgs
 
     @classmethod
-    def runEMCLARITY(cls, protocol, program, args, cwd=None):
+    def runEmClarity(cls, protocol, program, args, cwd=None):
         """ Run EMCLARITY command from a given protocol. """
         protocol.runJob(program, args, env=cls.getEnviron(), cwd=cwd,
                         numberOfMpi=1)

@@ -42,9 +42,8 @@ from pyworkflow import BETA
 from pyworkflow.object import Set, Integer
 import pyworkflow.protocol.params as params
 import tomo.objects as tomoObj
-from imod import Plugin
-from pwem.emlib.image import ImageHandler
-from imod.protocols.protocol_base import ProtImodBase
+from emclarity import Plugin
+
 
 
 class EmclarityAutoAlign(Protocol):
@@ -63,11 +62,11 @@ class EmclarityAutoAlign(Protocol):
         # You need a params to belong to a section:
         form.addSection('Input')
 
-        # form.addParam('inputSetOfTiltSeries',
-        #               params.PointerParam,
-        #               pointerClass='SetOfTiltSeries',
-        #               important=True,
-        #               label='Input set of tilt-series.')
+        form.addParam('inputSetOfTiltSeries',
+                      params.PointerParam,
+                      pointerClass='SetOfTiltSeries',
+                      important=True,
+                      label='Input set of tilt-series.')
 
         form.addParam('beadDiameter', params.FloatParam,
                       default=10,
@@ -139,9 +138,9 @@ class EmclarityAutoAlign(Protocol):
 
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
-        #for ts in self.inputSetOfTiltSeries.get():
-            #     self._insertFunctionStep(self.convertInputStep, ts.getObjId())
-            self._insertFunctionStep(self.autoAlignStep, None)
+        for ts in self.inputSetOfTiltSeries.get():
+            #self._insertFunctionStep(self.convertInputStep, ts.getObjId())
+            self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
         #     self._insertFunctionStep(self.generateOutputStackStep, ts.getObjId())
         #     if self.computeAlignment.get() == 0:
         #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
@@ -149,8 +148,9 @@ class EmclarityAutoAlign(Protocol):
 
     def autoAlignStep(self, tsObjId):
         """Compute transformation matrix for each tilt series"""
-        param_file = self.create_parameters_file()
         ts = self.inputSetOfTiltSeries.get()[tsObjId]
+        sampling = ts.getSamplingRate()
+        param_file = self.create_parameters_file(sampling)
         tsId = ts.getTsId()
         extraPrefix = self._getExtraPath(tsId)
         tmpPrefix = self._getTmpPath(tsId)
@@ -162,14 +162,19 @@ class EmclarityAutoAlign(Protocol):
             'rotationAngle': ts.getAcquisition().getTiltAxisAngle()
         }
 
-        # adaptarlos a los params
-        argsAutoAlign = "-param_file %(param_file)s " \
-                    "-stack %(stack)s " \
-                    "-rawtlt %(rawtlt)s " \
-                    "-rotationAngle %(rotationAngle).2f " \
+        stack = os.path.join(tmpPrefix, ts.getFirstItem().parseFileName())
+        #rawtlt = os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf"))
+        rawtlt = self._getExtraPath('rowtlt.tlt')
+        ts.generateTltFile(rawtlt)
+        rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
+        argsAutoAlign = "%s" %param_file
+        argsAutoAlign += " %s" %stack
+        argsAutoAlign += " %s" %rawtlt
+        argsAutoAlign += " %s" %rotationAngle
 
-        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign % paramsAutoAlign)
+        print(argsAutoAlign)
+        Plugin.runEmClarity(self, 'emClarity autoAlign', argsAutoAlign % paramsAutoAlign)
 
 
     def generateOutputStackStep(self):
@@ -223,11 +228,12 @@ class EmclarityAutoAlign(Protocol):
 
         self._store()
 
-    def create_parameters_file(self):
-        #print(self.getParam('inputSetOfTiltSeries'))
-        f = open('params_file.txt', 'w')
-        #f.write('inputSetOfTiltSeries=' + self.inputSetOfTiltSeries)
-        f.write('beadDiameter=' + str(self.beadDiameter))
+    def create_parameters_file(self, sampling):
+        fn_params = self._getExtraPath('param.m')
+        f = open(fn_params, 'w')
+        pixel_size = sampling * 1e-10
+        f.write('PIXEL_SIZE=' + str(pixel_size))
+        f.write('\nbeadDiameter=' + str(self.beadDiameter))
         f.write('\nautoAli_max_resolution=' + str(self.autoAli_max_resolution))
         f.write('\nautoAli_min_sampling_rate=' + str(self.autoAli_min_sampling_rate))
         f.write('\nautoAli_max_sampling_rate=' + str(self.autoAli_max_sampling_rate))
@@ -240,7 +246,7 @@ class EmclarityAutoAlign(Protocol):
         f.write('\nautoAli_max_shift_factor=' + str(self.autoAli_max_shift_factor))
         f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads))
         f.close()
-        return f
+        return fn_params
     # --------------------------- INFO functions -----------------------------------
     def _summary(self):
         """ Summarize what the protocol has done"""
