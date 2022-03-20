@@ -164,7 +164,7 @@ class EmclarityAutoAlign(Protocol):
 
         stack = os.path.join(tmpPrefix, ts.getFirstItem().parseFileName())
         #rawtlt = os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf"))
-        rawtlt = self._getExtraPath('rowtlt.tlt')
+        rawtlt = self._getExtraPath('tilt.rawtlt')
         ts.generateTltFile(rawtlt)
         rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
