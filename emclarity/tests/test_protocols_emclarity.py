@@ -33,6 +33,8 @@ import tomo
 
 from imod.protocols import *
 
+from emclarity.protocols import *
+
 
 
 class TestImodBase(BaseTest):
@@ -273,6 +275,27 @@ class TestImodBase(BaseTest):
         cls.launchProtocol(cls.protCTFCorrection)
         return cls.protCTFCorrection
 
+    @classmethod
+    def _runAutoAlign(cls, inputSoTS, beadDiameter, maxResolution, minSamplingRate, maxSamplingRate, iterationsPerBin,
+                      nItersNoRotation, patchSizeFactor, patchTrackingBorder, patchOverlap, maxShiftInAngstroms,
+                      maxShiftFactor, refineOnBeads):
+        # He modificado protocols.conf 
+        cls.protAutoAlign = cls.newProtocol(ProtAutoAlign,
+                                            inputSoTS=inputSoTS,
+                                            beadDiameter=beadDiameter,
+                                            maxResolution=maxResolution,
+                                            minSamplingRate=minSamplingRate,
+                                            maxSamplingRate=maxSamplingRate,
+                                            iterationsPerBin=iterationsPerBin,
+                                            nItersNoRotation=nItersNoRotation,
+                                            patchSizeFactor=patchSizeFactor,
+                                            patchTrackingBorder=patchTrackingBorder,
+                                            patchOverlap=patchOverlap,
+                                            maxShiftInAngstroms=maxShiftInAngstroms,
+                                            maxShiftFactor=maxShiftFactor,
+                                            refineOnBeads=refineOnBeads)
+        cls.launchProtocol(cls.protAutoAlign)
+        return cls.protAutoAlign
 
 class TestImodReconstructionWorkflow(TestImodBase):
     @classmethod
