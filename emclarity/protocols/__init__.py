@@ -3,4 +3,4 @@
 # Module to declare protocols
 # Find documentation here: https://scipion-em.github.io/docs/docs/developer/creating-a-protocol
 # **************************************************************************
-from .protocol_autoAlign import EmclarityAutoAlign
+from .protocol_autoAlign import ProtEmclarityAutoAlign

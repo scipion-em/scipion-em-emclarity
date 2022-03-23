@@ -26,18 +26,16 @@
 # **************************************************************************
 
 """
-@article{you2019,
-title = "Title of your paper ",
-journal = "...",
-volume = "...",
-number = ".",
-pages = "1 - 6",
-year = "2019",
-issn = "0000-1111",
-doi = "http://dx.doi.org/xxxxx/xxxxx",
-url = "http://www.url",
-author = "you and your team",
-keywords = "Single particle analysis Tomography",
+@article{himes2018,
+title = "emClarity: software for high-resolution cryo-electron tomography and subtomogram averaging ",
+journal = "nature methods",
+volume = "15",
+pages = "955 - 961",
+year = "2018",
+doi = "https://doi.org/10.1038/s41592-018-0167-z",
+url = "https://github.com/bHimes/emClarity",
+author = "Benjamin A .Himes, Peijun Zhang",
+keywords = "Electron Tomography",
 }
 
 """

@@ -33,8 +33,8 @@ from .constants import *
 
 __version__ = '0.0.1'
 
-_logo = "icon.png"
-_references = ['you2019']
+_logo = "icon.png" #CAMBIAR LOGO
+_references = ['himes2018']
 
 
 class Plugin(pwem.Plugin):
@@ -49,8 +49,16 @@ class Plugin(pwem.Plugin):
         cls._defineEmVar(MATLAB_MCR_HOME, matlabMcrHome)
 
     @classmethod
+    def _getEMFolder(cls, version, *paths):
+        return os.path.join("emClarity-%s" % version, *paths)
+
+    @classmethod
+    def _getEmClarityFolder(cls, version, *paths):
+        return  os.path.join(cls._getEMFolder(version, "emClarity"), *paths)
+
+    @classmethod
     def getEnviron(cls):
-        """ Setup the environment variables needed to launch EMCLARITY. """
+        """ Setup the environment variables needed to launch EmClarity. """
         environ = Environ(os.environ)
         matlab_runtimeLib = os.path.join(MATLAB_FOLDER, 'v96/runtime/glnxa64')
         matlab_binLib = os.path.join(MATLAB_FOLDER, 'v96/bin/glnxa64')
@@ -89,9 +97,46 @@ class Plugin(pwem.Plugin):
 
     @classmethod
     def runEmClarity(cls, protocol, program, args, cwd=None):
-        """ Run EMCLARITY command from a given protocol. """
-        protocol.runJob(program, args, env=cls.getEnviron(), cwd=cwd,
+        """ Run EmClarity command from a given protocol. """
+        # Get the command
+        print("Antes:" + program)
+        cmd = cls.getEmClarityCmd(program)
+        print("Despues:" + program)
+        print(cmd)
+
+        protocol.runJob(cmd, args, env=cls.getEnviron(), cwd=cwd,
                         numberOfMpi=1)
+
+    @classmethod
+    def getEmClarityCmd(cls, program):
+        """ Composes an EmClarity command for a given program. """
+
+        # Program to run
+        program = cls._getProgram(program)
+
+        # Command to run
+        cmd = ""
+
+        # If absolute ... (then it is based on the config)
+        if os.path.isabs(program):
+            cmd += ". " + cls.getHome("emClarity_1_5_3_11_v19a ") #+ " && "
+
+        cmd += program
+
+        return cmd
+
+    @classmethod
+    def _getProgram(cls, program):
+        """ Returns the same program  if config missing
+        or the path to the program based on the config file."""
+        # Compose path based on config
+        progFromConfig = cls.getHome("bin", program)
+
+        # Check if EmClarity from config exists
+        if os.path.exists(progFromConfig):
+            return progFromConfig
+        else:
+            return program
 
     @classmethod
     def defineBinaries(cls, env):

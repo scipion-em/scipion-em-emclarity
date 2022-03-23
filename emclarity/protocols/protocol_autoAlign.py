@@ -46,7 +46,7 @@ from emclarity import Plugin
 
 
 
-class EmclarityAutoAlign(Protocol):
+class ProtEmclarityAutoAlign(Protocol):
     """
     This protocol will print hello world in the console
     IMPORTANT: Classes names should be unique, better prefix them
@@ -174,7 +174,8 @@ class EmclarityAutoAlign(Protocol):
         argsAutoAlign += " %s" %rotationAngle
 
         print(argsAutoAlign)
-        Plugin.runEmClarity(self, 'emClarity autoAlign', argsAutoAlign % paramsAutoAlign)
+        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign % paramsAutoAlign,
+                            cwd=self._getExtraPath())
 
 
     def generateOutputStackStep(self):
@@ -227,7 +228,7 @@ class EmclarityAutoAlign(Protocol):
         self.outputSetOfTiltSeries.write()
 
         self._store()
-
+    # ACTUALIZAR PARAM FILE        
     def create_parameters_file(self, sampling):
         fn_params = self._getExtraPath('param.m')
         f = open(fn_params, 'w')
