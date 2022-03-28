@@ -33,7 +33,7 @@ from .constants import *
 
 __version__ = '0.0.1'
 
-_logo = "icon.png" #CAMBIAR LOGO
+_logo = "emClarity_Logo.png"
 _references = ['himes2018']
 
 

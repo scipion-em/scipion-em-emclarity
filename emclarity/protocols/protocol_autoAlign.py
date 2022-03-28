@@ -69,7 +69,7 @@ class ProtEmclarityAutoAlign(Protocol):
                       label='Input set of tilt-series.')
 
         form.addParam('beadDiameter', params.FloatParam,
-                      default=10,
+                      default=10e-9,
                       important=True,
                       label='Bead diameter',
                       help='Bead diameter in meters (e.g. 10e-9). If 0, the beads are ignored during the alignment')
@@ -90,25 +90,25 @@ class ProtEmclarityAutoAlign(Protocol):
                       help='Minimum pixel size used for alignment, in Å per pixel')
 
         form.addParam('autoAli_iterations_per_bin', params.FloatParam,
-                      default=3,
+                      default=3.0,
                       label='Iterations per bin',
                       help='The number of patch tracking iterations, for each bin')
 
         form.addParam('autoAli_n_iters_no_rotation', params.FloatParam,
-                      default=3,
+                      default=3.0,
                       label='n iters no rotation',
                       help='The number of patch tracking iterations, for each bin,'
                            'before activating local alignments')
 
         form.addParam('autoAli_patch_size_factor', params.FloatParam,
-                      default=4,
+                      default=4.0,
                       label='Patch size factor',
                       help='Sets the size of the patches used for patch tracking.'
                            'Making this larger will result in more patches, and more local areas in later iterations,'
                            'but may also decrease accuracy')
 
         form.addParam('autoAli_patch_tracking_border', params.FloatParam,
-                      default=64,
+                      default=64.0,
                       label='Patch tracking border',
                       help='Number of pixels to trim off each edge in X and in Y')
 
@@ -119,12 +119,12 @@ class ProtEmclarityAutoAlign(Protocol):
                            'This influences the number of patches')
 
         form.addParam('autoAli_max_shift_in_angstroms', params.FloatParam,
-                      default=40,
+                      default=40.0,
                       label='Max shift in angstroms',
                       help='Maximum shifts allowed, in Å, for the patch tracking alignment')
 
         form.addParam('autoAli_max_shift_factor', params.FloatParam,
-                      default=1,
+                      default=1.0,
                       label='Max shift factor',
                       help='The maximum shifts allowed are progressively reduced with the iterations i')
 
@@ -228,16 +228,18 @@ class ProtEmclarityAutoAlign(Protocol):
         self.outputSetOfTiltSeries.write()
 
         self._store()
-    # ACTUALIZAR PARAM FILE        
+      
     def create_parameters_file(self, sampling):
         fn_params = self._getExtraPath('param.m')
         f = open(fn_params, 'w')
         pixel_size = sampling * 1e-10
-        f.write('PIXEL_SIZE=' + str(pixel_size))
+        f.write('nGPUs=1')
+        f.write('\nnCpuCores=4')
+        f.write('\n\nPIXEL_SIZE=' + str(pixel_size))
         f.write('\nbeadDiameter=' + str(self.beadDiameter))
-        f.write('\nautoAli_max_resolution=' + str(self.autoAli_max_resolution))
-        f.write('\nautoAli_min_sampling_rate=' + str(self.autoAli_min_sampling_rate))
-        f.write('\nautoAli_max_sampling_rate=' + str(self.autoAli_max_sampling_rate))
+        f.write('\nautoAli_max_resolution=' + str(int(float(self.autoAli_max_resolution))))
+        f.write('\nautoAli_min_sampling_rate=' + str(int(float(self.autoAli_min_sampling_rate))))
+        f.write('\nautoAli_max_sampling_rate=' + str(int(float(self.autoAli_max_sampling_rate))))
         f.write('\nautoAli_iterations_per_bin=' + str(self.autoAli_iterations_per_bin))
         f.write('\nautoAli_n_iters_no_rotation=' + str(self.autoAli_n_iters_no_rotation))
         f.write('\nautoAli_patch_size_factor=' + str(self.autoAli_patch_size_factor))
@@ -245,7 +247,7 @@ class ProtEmclarityAutoAlign(Protocol):
         f.write('\nautoAli_patch_overlap=' + str(self.autoAli_patch_overlap))
         f.write('\nautoAli_max_shift_in_angstroms=' + str(self.autoAli_max_shift_in_angstroms))
         f.write('\nautoAli_max_shift_factor=' + str(self.autoAli_max_shift_factor))
-        f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads))
+        f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads).lower())
         f.close()
         return fn_params
     # --------------------------- INFO functions -----------------------------------
