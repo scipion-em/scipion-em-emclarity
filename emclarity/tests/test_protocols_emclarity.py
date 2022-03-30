@@ -31,7 +31,7 @@ from pwem.emlib.image import ImageHandler
 
 import tomo
 
-from protocols import *
+from emclarity.protocols import ProtEmclarityAutoAlign
 
 
 
