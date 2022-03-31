@@ -31,7 +31,7 @@ import pyworkflow as pw
 from pyworkflow.utils import Environ
 from .constants import *
 
-__version__ = '0.0.1'
+__version__ = '1.5.3.11'
 
 _logo = "emClarity_Logo.png"
 _references = ['himes2018']
@@ -43,7 +43,7 @@ class Plugin(pwem.Plugin):
 
     @classmethod
     def _defineVariables(cls):
-        emclarityHome = 'emClarity-%s' % __version__
+        emclarityHome = 'emClarity_%s' % __version__
         matlabMcrHome = 'matlabMcr-%s' % __version__
         cls._defineEmVar(EMCLARITY_HOME, emclarityHome)
         cls._defineEmVar(MATLAB_MCR_HOME, matlabMcrHome)
@@ -53,7 +53,7 @@ class Plugin(pwem.Plugin):
         return os.path.join("emClarity-%s" % version, *paths)
 
     @classmethod
-    def _getEmClarityFolder(cls, version, *paths):
+    def _getEmClarityBin(cls, version, *paths):
         return  os.path.join(cls._getEMFolder(version, "emClarity"), *paths)
 
     @classmethod
@@ -75,7 +75,7 @@ class Plugin(pwem.Plugin):
         return environ
 
     @classmethod
-    def getEMCLARITYEnvActivation(cls):
+    def getEmClarityEnvActivation(cls):
         activation = cls.getVar(EMCLARITY_ENV_ACTIVATION)
         scipionHome = pw.Config.SCIPION_HOME + os.path.sep
 
@@ -99,10 +99,10 @@ class Plugin(pwem.Plugin):
     def runEmClarity(cls, protocol, program, args, cwd=None):
         """ Run EmClarity command from a given protocol. """
         # Get the command
-        print("Antes:" + program)
+        #print("Antes:" + program)
         cmd = cls.getEmClarityCmd(program)
-        print("Despues:" + program)
-        print(cmd)
+        #print("Despues:" + program)
+        #print(cmd)
 
         protocol.runJob(cmd, args, env=cls.getEnviron(), cwd=cwd,
                         numberOfMpi=1)
@@ -112,14 +112,15 @@ class Plugin(pwem.Plugin):
         """ Composes an EmClarity command for a given program. """
 
         # Program to run
-        program = cls._getProgram(program)
+        program_path = cls._getProgram("emClarity_1_5_3_11_v19a")
 
         # Command to run
-        cmd = ""
+        cmd = program_path
+        cmd += ' '
 
         # If absolute ... (then it is based on the config)
-        if os.path.isabs(program):
-            cmd += ". " + cls.getHome("emClarity_1_5_3_11_v19a ") #+ " && "
+        #if os.path.isabs(program):
+            #cmd += ". " + cls.getHome("emClarity_1_5_3_11_v19a ") #+ " && "
 
         cmd += program
 
@@ -131,7 +132,6 @@ class Plugin(pwem.Plugin):
         or the path to the program based on the config file."""
         # Compose path based on config
         progFromConfig = cls.getHome("bin", program)
-
         # Check if EmClarity from config exists
         if os.path.exists(progFromConfig):
             return progFromConfig

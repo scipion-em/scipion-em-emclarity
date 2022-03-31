@@ -174,7 +174,7 @@ class ProtEmclarityAutoAlign(Protocol):
         argsAutoAlign += " %s" %rotationAngle
 
         print(argsAutoAlign)
-        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign % paramsAutoAlign,
+        Plugin.runEmClarity(self, 'emC_autoalign', argsAutoAlign % paramsAutoAlign,
                             cwd=self._getExtraPath())
 
 
@@ -237,9 +237,9 @@ class ProtEmclarityAutoAlign(Protocol):
         f.write('\nnCpuCores=4')
         f.write('\n\nPIXEL_SIZE=' + str(pixel_size))
         f.write('\nbeadDiameter=' + str(self.beadDiameter))
-        f.write('\nautoAli_max_resolution=' + str(int(float(self.autoAli_max_resolution))))
-        f.write('\nautoAli_min_sampling_rate=' + str(int(float(self.autoAli_min_sampling_rate))))
-        f.write('\nautoAli_max_sampling_rate=' + str(int(float(self.autoAli_max_sampling_rate))))
+        f.write('\nautoAli_max_resolution=' + str(float(self.autoAli_max_resolution)))
+        f.write('\nautoAli_min_sampling_rate=' + str(float(self.autoAli_min_sampling_rate)))
+        f.write('\nautoAli_max_sampling_rate=' + str(float(self.autoAli_max_sampling_rate)))
         f.write('\nautoAli_iterations_per_bin=' + str(self.autoAli_iterations_per_bin))
         f.write('\nautoAli_n_iters_no_rotation=' + str(self.autoAli_n_iters_no_rotation))
         f.write('\nautoAli_patch_size_factor=' + str(self.autoAli_patch_size_factor))

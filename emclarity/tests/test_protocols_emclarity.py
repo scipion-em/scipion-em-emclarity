@@ -40,6 +40,23 @@ class TestEmClarityBase(BaseTest):
     def setUpClass(cls):
         setupTestProject(cls)
 
+        cls.inputDataSet = DataSet.getDataSet('tomo-em')
+        cls.inputSoTS = cls.inputDataSet.getFile('ts1')
+        # Añadir otro con protEmclarityAutoALign
+        cls.protImportTS = cls._runImportTiltSeries(filesPath=os.path.split(cls.inputSoTS)[0],
+                                                    pattern="BB{TS}.st",
+                                                    anglesFrom=0,
+                                                    voltage=300,
+                                                    magnification=105000,
+                                                    sphericalAberration=2.7,
+                                                    amplitudeContrast=0.1,
+                                                    samplingRate=20.2,
+                                                    doseInitial=0,
+                                                    dosePerFrame=0.3,
+                                                    minAngle=-55,
+                                                    maxAngle=65.0,
+                                                    stepAngle=2.0)
+
     @classmethod
     def _runImportTiltSeries(cls, filesPath, pattern, voltage, magnification, sphericalAberration, amplitudeContrast,
                              samplingRate, doseInitial, dosePerFrame, anglesFrom=0, minAngle=0.0, maxAngle=0.0,
@@ -67,8 +84,8 @@ class TestEmClarityBase(BaseTest):
     def _runAutoAlign(cls, inputSoTS, beadDiameter, maxResolution, minSamplingRate, maxSamplingRate, iterationsPerBin,
                       nItersNoRotation, patchSizeFactor, patchTrackingBorder, patchOverlap, maxShiftInAngstroms,
                       maxShiftFactor, refineOnBeads):
-        # He modificado protocols.conf 
-        cls.ProtEmclarityAutoAlign = cls.newProtocol(ProtEmclarityAutoAlign,
+        # He modificado protocols.conf
+        cls.protEmclarityAutoAlign = cls.newProtocol(ProtEmclarityAutoAlign,
                                             inputSoTS=inputSoTS,
                                             beadDiameter=beadDiameter,
                                             maxResolution=maxResolution,
@@ -82,5 +99,10 @@ class TestEmClarityBase(BaseTest):
                                             maxShiftInAngstroms=maxShiftInAngstroms,
                                             maxShiftFactor=maxShiftFactor,
                                             refineOnBeads=refineOnBeads)
-        cls.launchProtocol(cls.ProtEmclarityAutoAlign)
-        return cls.ProtEmclarityAutoAlign
+        cls.launchProtocol(cls.protEmclarityAutoAlign)
+        return cls.protEmclarityAutoAlign
+
+    def test_importTSOutput(self):
+        self.assertIsNotNone(self.protImportTS.outputTiltSeries)
+    def test_emClarityAutoAlign(self):
+        self.assertIsNotNone(self.protEmclarityAutoAlign.outputAlignTiltSeries)
