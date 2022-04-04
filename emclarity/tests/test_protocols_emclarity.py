@@ -56,6 +56,20 @@ class TestEmClarityBase(BaseTest):
                                                     minAngle=-55,
                                                     maxAngle=65.0,
                                                     stepAngle=2.0)
+        
+        cls.protEmclarityAutoAlign = cls._runAutoAlign(inputSoTS=os.path.split(cls.inputSoTS)[0],
+                                                    beadDiameter=10e-0,
+                                                    maxResolution=18,
+                                                    minSamplingRate=10,
+                                                    maxSamplingRate=3,
+                                                    iterationsPerBin=3.0,
+                                                    nItersNoRotation=3.0,
+                                                    patchSizeFactor=4.0,
+                                                    patchTrackingBorder=64.0,
+                                                    patchOverlap=0.5,
+                                                    maxShiftInAngstroms=40.0,
+                                                    maxShiftFactor=1.0,
+                                                    refineOnBeads=False)
 
     @classmethod
     def _runImportTiltSeries(cls, filesPath, pattern, voltage, magnification, sphericalAberration, amplitudeContrast,
