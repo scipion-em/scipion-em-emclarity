@@ -30,6 +30,7 @@ import pwem
 import pyworkflow as pw
 from pyworkflow.utils import Environ
 from .constants import *
+import imod as imodplugin
 
 __version__ = '1.5.3.11'
 
@@ -54,24 +55,26 @@ class Plugin(pwem.Plugin):
 
     @classmethod
     def _getEmClarityBin(cls, version, *paths):
-        return  os.path.join(cls._getEMFolder(version, "emClarity"), *paths)
+        return os.path.join(cls._getEMFolder(version, "emClarity"), *paths)
 
     @classmethod
     def getEnviron(cls):
-        """ Setup the environment variables needed to launch EmClarity. """
+        """ Setup the environment variables needed to launch emClarity. """
         environ = Environ(os.environ)
-        matlab_runtimeLib = os.path.join(MATLAB_FOLDER, 'v96/runtime/glnxa64')
-        matlab_binLib = os.path.join(MATLAB_FOLDER, 'v96/bin/glnxa64')
-        matlab_sysLib = os.path.join(MATLAB_FOLDER, 'v96/sys/os/glnxa64')
-        matlab_externLib = os.path.join(MATLAB_FOLDER, 'v96/extern/bin/glnxa64')
+        matlab_runtimeLib = os.path.join(MATLAB_FOLDER, 'matlab2019a/v96/runtime/glnxa64')
+        matlab_binLib = os.path.join(MATLAB_FOLDER, 'matlab2019a/v96/bin/glnxa64')
+        matlab_sysLib = os.path.join(MATLAB_FOLDER, 'matlab2019a/v96/sys/os/glnxa64')
+        matlab_externLib = os.path.join(MATLAB_FOLDER, 'matlab2019a/v96/extern/bin/glnxa64')
+        emclarity_bin = os.path.join(EMCLARITY_HOME, 'bin')
+        emclarity_lib = os.path.join(EMCLARITY_HOME, 'lib')
 
-        environ.update({
-            'PATH': Plugin.getHome(),
-            'EMCLARITY_BIN': os.path.join(Plugin.getHome(), 'bin'),
-            'LD_LIBRARY_PATH': matlab_runtimeLib + ":" + matlab_binLib + ":" + matlab_sysLib
-                                + ":" + matlab_externLib + ":" + environ['LD_LIBRARY_PATH']
-        }, position=Environ.BEGIN)
+        env_emC = {
+            'LD_LIBRARY_PATH': (matlab_runtimeLib + ":" + matlab_binLib + ":" + matlab_sysLib + ":" + matlab_externLib + \
+                                ":" + emclarity_bin + ":" + emclarity_lib + ":" + environ['LD_LIBRARY_PATH'])}
 
+        environ.update(env_emC, position=Environ.BEGIN)
+
+        print(env_emC)
         return environ
 
     @classmethod
@@ -86,23 +89,12 @@ class Plugin(pwem.Plugin):
         return cls.getActiveVersion().startswith(__version__)
 
     @classmethod
-    def getDependencies(cls):
-        # try to get CONDA activation command
-        condaActivationCmd = cls.getCondaActivationCmd()
-        neededProgs = ['wget']
-        if not condaActivationCmd:
-            neededProgs.append('conda')
-
-        return neededProgs
-
-    @classmethod
     def runEmClarity(cls, protocol, program, args, cwd=None):
-        """ Run EmClarity command from a given protocol. """
+        """ Run emClarity command from a given protocol. """
         # Get the command
-        #print("Antes:" + program)
         cmd = cls.getEmClarityCmd(program)
-        #print("Despues:" + program)
-        #print(cmd)
+
+        print('cwd = ', cwd)
 
         protocol.runJob(cmd, args, env=cls.getEnviron(), cwd=cwd,
                         numberOfMpi=1)
@@ -110,18 +102,20 @@ class Plugin(pwem.Plugin):
     @classmethod
     def getEmClarityCmd(cls, program):
         """ Composes an EmClarity command for a given program. """
+        # If absolute ... (then it is based on the config)
+        #if os.path.isabs(program):
+        #    cmd += ". " + cls.getHome("IMOD-linux.sh") + " && "
 
+        cmd = ". " + imodplugin.getImodEnv()#getHome("IMOD-linux.sh") + " && "
+        print('--------------------')
+        print(cmd)
+        print('--------------------')
         # Program to run
         program_path = cls._getProgram("emClarity_1_5_3_11_v19a")
 
         # Command to run
-        cmd = program_path
+        cmd += program_path
         cmd += ' '
-
-        # If absolute ... (then it is based on the config)
-        #if os.path.isabs(program):
-            #cmd += ". " + cls.getHome("emClarity_1_5_3_11_v19a ") #+ " && "
-
         cmd += program
 
         return cmd
@@ -145,7 +139,7 @@ class Plugin(pwem.Plugin):
                        tar='emClarity_1.5.3.11.tgz',
                        default=True)
 
-        destinationFolder = os.path.join(MATLAB_FOLDER,'matlab2019a')
+        destinationFolder = os.path.join(MATLAB_FOLDER, 'matlab2019a')
         args = '-mode silent -agreeToLicense yes -destinationFolder %s' % os.path.abspath(destinationFolder)
 
         installCmd = 'cd %s && mkdir %s && ./install %s' % (MATLAB_FOLDER,

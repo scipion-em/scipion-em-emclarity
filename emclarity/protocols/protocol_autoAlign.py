@@ -45,7 +45,7 @@ import tomo.objects as tomoObj
 from emclarity import Plugin
 
 
-
+PARAMS_FN = 'param.m'
 class ProtEmclarityAutoAlign(Protocol):
     """
     This protocol will print hello world in the console
@@ -147,35 +147,36 @@ class ProtEmclarityAutoAlign(Protocol):
         # self._insertFunctionStep(self.closeOutputSetsStep)
 
     def autoAlignStep(self, tsObjId):
-        """Compute transformation matrix for each tilt series"""
+        """Compute the alignment of the tilt series"""
         ts = self.inputSetOfTiltSeries.get()[tsObjId]
-        sampling = ts.getSamplingRate()
-        param_file = self.create_parameters_file(sampling)
         tsId = ts.getTsId()
         extraPrefix = self._getExtraPath(tsId)
+
+        import pyworkflow.utils.path as path
+        path.makePath(extraPrefix)
+
+        tsPath = os.path.join(extraPrefix, ts.getFirstItem().getFileName())
         tmpPrefix = self._getTmpPath(tsId)
+        print(extraPrefix)
+        print(ts.getFirstItem().parseFileName())
 
-        paramsAutoAlign = {
-            'param_file': param_file,
-            'stack': os.path.join(tmpPrefix, ts.getFirstItem().parseFileName()),
-            'rawtlt': os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf")),
-            'rotationAngle': ts.getAcquisition().getTiltAxisAngle()
-        }
-
-        stack = os.path.join(tmpPrefix, ts.getFirstItem().parseFileName())
+        #stack = os.path.join(extraPrefix, ts.getFirstItem().parseFileName())
+        stack = ts.getFirstItem().getFileName()
         #rawtlt = os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf"))
         rawtlt = self._getExtraPath('tilt.rawtlt')
         ts.generateTltFile(rawtlt)
         rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
-        argsAutoAlign = "%s" %param_file
+        sampling = ts.getSamplingRate()
+        param_file = self.create_parameters_file(sampling)
+
+        argsAutoAlign = "%s" %PARAMS_FN
         argsAutoAlign += " %s" %stack
         argsAutoAlign += " %s" %rawtlt
         argsAutoAlign += " %s" %rotationAngle
 
         print(argsAutoAlign)
-        Plugin.runEmClarity(self, 'emC_autoalign', argsAutoAlign % paramsAutoAlign,
-                            cwd=self._getExtraPath())
+        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign, cwd=self._getExtraPath())
 
 
     def generateOutputStackStep(self):
@@ -230,12 +231,12 @@ class ProtEmclarityAutoAlign(Protocol):
         self._store()
       
     def create_parameters_file(self, sampling):
-        fn_params = self._getExtraPath('param.m')
+        fn_params = self._getExtraPath(PARAMS_FN)
         f = open(fn_params, 'w')
         pixel_size = sampling * 1e-10
         f.write('nGPUs=1')
-        f.write('\nnCpuCores=4')
-        f.write('\n\nPIXEL_SIZE=' + str(pixel_size))
+        f.write('\nnCpuCores=1')
+        f.write('\nPIXEL_SIZE=' + str(pixel_size))
         f.write('\nbeadDiameter=' + str(self.beadDiameter))
         f.write('\nautoAli_max_resolution=' + str(float(self.autoAli_max_resolution)))
         f.write('\nautoAli_min_sampling_rate=' + str(float(self.autoAli_min_sampling_rate)))

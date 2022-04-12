@@ -1,2 +1,4 @@
 scipion-pyworkflow
 scipion-em
+scipion-em-tomo
+scipion-em-imod
