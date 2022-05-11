@@ -46,6 +46,8 @@ from emclarity import Plugin
 
 
 PARAMS_FN = 'param.m'
+RAWTLT_FN = 'tilt.rawtlt'
+
 class ProtEmclarityAutoAlign(Protocol):
     """
     This protocol will print hello world in the console
@@ -172,9 +174,9 @@ class ProtEmclarityAutoAlign(Protocol):
         print(ts.getFirstItem().parseFileName())
 
         #stack = os.path.join(extraPrefix, ts.getFirstItem().parseFileName())
-        stack = ts.getFirstItem().getFileName()
+        stack = os.path.abspath(ts.getFirstItem().getFileName())
         #rawtlt = os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf"))
-        rawtlt = self._getExtraPath('tilt.rawtlt')
+        rawtlt = self._getExtraPath(RAWTLT_FN)
         ts.generateTltFile(rawtlt)
         rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
@@ -183,7 +185,7 @@ class ProtEmclarityAutoAlign(Protocol):
 
         argsAutoAlign = "%s" %PARAMS_FN
         argsAutoAlign += " %s" %stack
-        argsAutoAlign += " %s" %rawtlt
+        argsAutoAlign += " %s" %RAWTLT_FN
         argsAutoAlign += " %s" %rotationAngle
 
         print(argsAutoAlign)
