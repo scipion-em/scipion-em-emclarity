@@ -41,6 +41,7 @@ class TestEmClarityBase(BaseTest):
         setupTestProject(cls)
 
         cls.inputDataSet = DataSet.getDataSet('tomo-em')
+        # posible error en linea siguiente
         cls.inputSoTS = cls.inputDataSet.getFile('ts1')
         # Añadir otro con protEmclarityAutoALign
         cls.protImportTS = cls._runImportTiltSeries(filesPath=os.path.split(cls.inputSoTS)[0],

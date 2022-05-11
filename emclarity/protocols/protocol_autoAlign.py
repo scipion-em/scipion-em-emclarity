@@ -68,7 +68,7 @@ class ProtEmclarityAutoAlign(Protocol):
                       important=True,
                       label='Input set of tilt-series.')
 
-        form.addParam('beadDiameter', params.FloatParam,
+        form.addParam('beadDiameter (m)', params.FloatParam,
                       default=10e-9,
                       important=True,
                       label='Bead diameter',
@@ -76,33 +76,39 @@ class ProtEmclarityAutoAlign(Protocol):
 
         form.addParam('autoAli_max_resolution', params.FloatParam,
                       default=18,
-                      label='Max Resolution',
+                      label='Max Resolution (Å)',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Low-pass cutoff, in Å, used in alignment')
 
         form.addParam('autoAli_min_sampling_rate', params.FloatParam,
                       default=10,
-                      label='Min sampling rate',
+                      label='Min sampling rate (Å/px)',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Maximum pixel size used for alignment, in Å per pixel')
 
         form.addParam('autoAli_max_sampling_rate', params.FloatParam,
                       default=3,
-                      label='Max sampling rate',
+                      label='Max sampling rate (Å/px)',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Minimum pixel size used for alignment, in Å per pixel')
 
         form.addParam('autoAli_iterations_per_bin', params.FloatParam,
                       default=3.0,
                       label='Iterations per bin',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='The number of patch tracking iterations, for each bin')
 
         form.addParam('autoAli_n_iters_no_rotation', params.FloatParam,
                       default=3.0,
                       label='n iters no rotation',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='The number of patch tracking iterations, for each bin,'
                            'before activating local alignments')
 
         form.addParam('autoAli_patch_size_factor', params.FloatParam,
                       default=4.0,
                       label='Patch size factor',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Sets the size of the patches used for patch tracking.'
                            'Making this larger will result in more patches, and more local areas in later iterations,'
                            'but may also decrease accuracy')
@@ -110,27 +116,32 @@ class ProtEmclarityAutoAlign(Protocol):
         form.addParam('autoAli_patch_tracking_border', params.FloatParam,
                       default=64.0,
                       label='Patch tracking border',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Number of pixels to trim off each edge in X and in Y')
 
         form.addParam('autoAli_patch_overlap', params.FloatParam,
                       default=0.5,
                       label='Patch overlap',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Fractional overlap in X and Y between patches that are tracked by correlation.'
                            'This influences the number of patches')
 
         form.addParam('autoAli_max_shift_in_angstroms', params.FloatParam,
                       default=40.0,
-                      label='Max shift in angstroms',
+                      label='Max shift (Å)',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Maximum shifts allowed, in Å, for the patch tracking alignment')
 
         form.addParam('autoAli_max_shift_factor', params.FloatParam,
                       default=1.0,
                       label='Max shift factor',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='The maximum shifts allowed are progressively reduced with the iterations i')
 
         form.addParam('autoAli_refine_on_beads', params.BooleanParam,
                       default=False,
                       label='Refine on beads',
+                      expertLevel=params.LEVEL_ADVANCED,
                       help='Whether or not the patch tracking alignment should be refined using the gold beads.'
                            'This refinement makes the alignment significantly slower, but can substantially '
                            'improve the quality of the alignment')
