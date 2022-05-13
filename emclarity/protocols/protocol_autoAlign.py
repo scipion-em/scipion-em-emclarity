@@ -70,10 +70,10 @@ class ProtEmclarityAutoAlign(Protocol):
                       important=True,
                       label='Input set of tilt-series.')
 
-        form.addParam('beadDiameter (m)', params.FloatParam,
+        form.addParam('beadDiameter', params.FloatParam,
                       default=10e-9,
                       important=True,
-                      label='Bead diameter',
+                      label='Bead diameter (m)',
                       help='Bead diameter in meters (e.g. 10e-9). If 0, the beads are ignored during the alignment')
 
         form.addParam('autoAli_max_resolution', params.FloatParam,
