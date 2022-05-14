@@ -42,3 +42,10 @@ DataSet(name='tutorialDataImodCTF',
             'tsCtf1': 'WTI042413_1series4.st',
             'inputCtfFile': 'WTI042413_1series4.defocus'
         })
+
+DataSet(name='emclarity_data',
+        folder='emclarity_data',
+        files={
+            'ts1': 'tilt1.st',
+            'tlt1': 'tilt1.tlt'
+        })
