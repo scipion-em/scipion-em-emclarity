@@ -45,7 +45,7 @@ import tomo.objects as tomoObj
 from emclarity import Plugin
 
 
-PARAMS_FN = 'param.m'
+PARAMS_FN = 'param_ctf.m'
 RAWTLT_FN = 'tilt.rawtlt'
 
 class ProtEmclarityCtfEstimate(Protocol):
@@ -77,13 +77,13 @@ class ProtEmclarityCtfEstimate(Protocol):
                       help='Accelerating voltage of the microscope in Volts')
 
         form.addParam('Cs', params.FloatParam,
-                      default=2.7e-6,
+                      default=2.7e-3,
                       label='Cs (m)',
                       important=True,
                       help='Spherical aberration of the microscope in meters')
 
         form.addParam('AMPCONT', params.FloatParam,
-                      default=0.09,
+                      default=0.10,
                       label='AMPCONT',
                       important=True,
                       help='Percent amplitude contrast ratio')
@@ -114,13 +114,13 @@ class ProtEmclarityCtfEstimate(Protocol):
                            'option between ctf estimate and ctf 3d')
 
         form.addParam('CUM_e_DOSE', params.FloatParam,
-                      default=4.0,
+                      default=60,
                       label='CUM e DOSE (e/Å2)',
                       important=True,
                       help='Total exposure in e/Å2')
 
         form.addParam('doseAtMinTilt', params.FloatParam,
-                      default=64.0,
+                      default=1.46,
                       label='Dose At Min Tilt (e/Å2)',
                       important=True,
                       help='The exposure each view receive (should be about CUM_e_DOSE'
@@ -135,19 +135,19 @@ class ProtEmclarityCtfEstimate(Protocol):
                            'to the tilt angle (e.g. 0)')
 
         form.addParam('startingAngle', params.FloatParam,
-                      default=0,
+                      default=30,
                       label='Starting Angle (degrees)',
                       important=True,
                       help='Starting angle, in degrees')
 
         form.addParam('startingDirection', params.StringParam,
-                      default='', # neg o pos ?
+                      default='neg', 
                       label='Starting Direction',
                       important=True,
                       help='Starting direction; should the angles decrease or increase (neg or pos)')
 
         form.addParam('doseSymmetricIncrement', params.FloatParam,
-                      default=2, # Dice algo de especificar el numero como negativo
+                      default=0,
                       label='Dose Symmetric Increment',
                       important=True,
                       help='The number of tilts before each switch in direction. 0=false,'
@@ -164,7 +164,7 @@ class ProtEmclarityCtfEstimate(Protocol):
                            'cutoff, in meter')
 
         form.addParam('defEstimate', params.FloatParam,
-                      default=0, # ni idea que poner
+                      default=3e-6, 
                       label='defEstimate (m)',
                       important=True,
                       help='Initial rough estimate of the defocus, in meter. With defWindow,'
@@ -174,13 +174,9 @@ class ProtEmclarityCtfEstimate(Protocol):
                       default=1.5e-6,
                       label='defWindow (m)',
                       important=True,
-                      help='Starting angle, in degrees')
-
-        form.addParam('startingAngle', params.FloatParam,
-                      default=0,
-                      label='Starting Angle (degrees)',
-                      important=True,
-                      help='Starting angle, in degrees')
+                      help='Defocus window around defEstimate, in meter;'
+                       'e.g. if defEstimate = 2.5e-6 and defWindow = 1.5e-6,'
+                        'try a range of defocus between 1e-6 to 4e-6')
 
         form.addParam('deltaZtolerance', params.FloatParam,
                       default=50e-9,
@@ -190,8 +186,8 @@ class ProtEmclarityCtfEstimate(Protocol):
                            'that at the tilt-axis ±∆Z,in meters')
 
         form.addParam('zShift', params.FloatParam,
-                      default=0,
-                      label='Z Shift (??)',
+                      default=150e-9,
+                      label='Z Shift (m)',
                       expertLevel=params.LEVEL_ADVANCED,
                       help='Used for the handedness check. Shift the evaluation region'
                            '(Ztilt−axis ± deltaZtolerance) by this amount')
@@ -224,13 +220,13 @@ class ProtEmclarityCtfEstimate(Protocol):
     def _insertAllSteps(self):
         for ts in self.inputSetOfTiltSeries.get():
             #self._insertFunctionStep(self.convertInputStep, ts.getObjId())
-            self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
+            self._insertFunctionStep(self.ctf_estimateStep, ts.getObjId())
         #     self._insertFunctionStep(self.generateOutputStackStep, ts.getObjId())
         #     if self.computeAlignment.get() == 0:
         #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
         # self._insertFunctionStep(self.closeOutputSetsStep)
 
-    def autoAlignStep(self, tsObjId):
+    def ctf_estimateStep(self, tsObjId):
         """Compute the alignment of the tilt series"""
         ts = self.inputSetOfTiltSeries.get()[tsObjId]
         tsId = ts.getTsId()
@@ -245,26 +241,23 @@ class ProtEmclarityCtfEstimate(Protocol):
         print(ts.getFirstItem().parseFileName())
 
         #stack = os.path.join(extraPrefix, ts.getFirstItem().parseFileName())
-        stack = os.path.abspath(ts.getFirstItem().getFileName())
+        #stack = os.path.abspath(ts.getFirstItem().getFileName())
         #rawtlt = os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf"))
         rawtlt = self._getExtraPath(RAWTLT_FN)
         ts.generateTltFile(rawtlt)
-        rotationAngle = ts.getAcquisition().getTiltAxisAngle()
+        #rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
         sampling = ts.getSamplingRate()
         param_file = self.create_parameters_file(sampling)
 
-        argsAutoAlign = "%s" %PARAMS_FN
-        argsAutoAlign += " %s" %stack
-        argsAutoAlign += " %s" %RAWTLT_FN
-        argsAutoAlign += " %s" %rotationAngle
+        argsCtf_estimate = "%s" %PARAMS_FN
+        argsCtf_estimate += " %s" %RAWTLT_FN
 
-        print(argsAutoAlign)
-        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign, cwd=self._getExtraPath())
+        print(argsCtf_estimate)
+        Plugin.runEmClarity(self, 'ctf estimate', argsCtf_estimate, cwd=self._getExtraPath())
 
 
     def generateOutputStackStep(self):
-        # TO DO ADAPT FUNCTION FROM XCORR
         """ Generate tilt-serie with the associated transform matrix """
         ts = self.inputSetOfTiltSeries.get()
         tsId = ts.getTsId()
@@ -321,18 +314,20 @@ class ProtEmclarityCtfEstimate(Protocol):
         f.write('nGPUs=1')
         f.write('\nnCpuCores=1')
         f.write('\nPIXEL_SIZE=' + str(pixel_size))
+        f.write('\nSuperResolution=' + str(self.SuperResolution))
+        f.write('\nCs=' + str(float(self.Cs)))
+        f.write('\nVOLTAGE=' + str(float(self.VOLTAGE)))
+        f.write('\nAMPCONT=' + str(float(self.AMPCONT)))
+        f.write('\ndefEstimate=' + str(self.defEstimate))
+        f.write('\ndefWindow=' + str(self.defWindow))
+        f.write('\ndefCutOff=' + str(self.defCutOff))
+        f.write('\nCUM_e_DOSE=' + str(self.CUM_e_DOSE))
         f.write('\nbeadDiameter=' + str(self.beadDiameter))
-        f.write('\nautoAli_max_resolution=' + str(float(self.autoAli_max_resolution)))
-        f.write('\nautoAli_min_sampling_rate=' + str(float(self.autoAli_min_sampling_rate)))
-        f.write('\nautoAli_max_sampling_rate=' + str(float(self.autoAli_max_sampling_rate)))
-        f.write('\nautoAli_iterations_per_bin=' + str(self.autoAli_iterations_per_bin))
-        f.write('\nautoAli_n_iters_no_rotation=' + str(self.autoAli_n_iters_no_rotation))
-        f.write('\nautoAli_patch_size_factor=' + str(self.autoAli_patch_size_factor))
-        f.write('\nautoAli_patch_tracking_border=' + str(self.autoAli_patch_tracking_border))
-        f.write('\nautoAli_patch_overlap=' + str(self.autoAli_patch_overlap))
-        f.write('\nautoAli_max_shift_in_angstroms=' + str(self.autoAli_max_shift_in_angstroms))
-        f.write('\nautoAli_max_shift_factor=' + str(self.autoAli_max_shift_factor))
-        f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads).lower())
+        f.write('\noneOverCosineDose=' + str(self.oneOverCosineDose))
+        f.write('\nstartingAngle=' + str(self.startingAngle))
+        f.write('\nstartingDirection=' + str(self.startingDirection))
+        f.write('\ndoseSymmetricIncrement=' + str(self.doseSymmetricIncrement))
+        f.write('\ndoseAtMinTilt=' + str(self.doseAtMinTilt))
         f.close()
         return fn_params
     # --------------------------- INFO functions -----------------------------------
