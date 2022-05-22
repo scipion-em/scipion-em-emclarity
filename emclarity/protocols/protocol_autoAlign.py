@@ -193,7 +193,6 @@ class ProtEmclarityAutoAlign(Protocol):
 
 
     def generateOutputStackStep(self):
-        # TO DO ADAPT FUNCTION FROM XCORR
         """ Generate tilt-serie with the associated transform matrix """
         ts = self.inputSetOfTiltSeries.get()
         tsId = ts.getTsId()

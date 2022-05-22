@@ -41,9 +41,9 @@ class TestEmClarityBase(BaseTest):
         setupTestProject(cls)
 
         cls.inputDataSet = DataSet.getDataSet('emclarity_data')
-        # posible error en linea siguiente
+
         cls.inputSoTS = cls.inputDataSet.getFile('ts1')
-        # Añadir otro con protEmclarityAutoALign
+
         cls.protImportTS = cls._runImportTiltSeries(filesPath=os.path.split(cls.inputSoTS)[0],
                                                     pattern="tilt{TS}.st",
                                                     anglesFrom=0,
@@ -99,7 +99,7 @@ class TestEmClarityBase(BaseTest):
     def _runAutoAlign(cls, inputSoTS, beadDiameter, maxResolution, minSamplingRate, maxSamplingRate, iterationsPerBin,
                       nItersNoRotation, patchSizeFactor, patchTrackingBorder, patchOverlap, maxShiftInAngstroms,
                       maxShiftFactor, refineOnBeads):
-        # He modificado protocols.conf
+
         cls.protEmclarityAutoAlign = cls.newProtocol(ProtEmclarityAutoAlign,
                                             inputSoTS=inputSoTS,
                                             beadDiameter=beadDiameter,
