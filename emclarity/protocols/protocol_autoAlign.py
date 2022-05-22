@@ -32,23 +32,31 @@ This module will provide the traditional Hello world example
 """
 import os
 
-from pyworkflow.protocol import Protocol
-
-import imod.utils as utils
 import numpy as np
+
 import pwem.objects as data
 from pwem.objects import Transform
+
 from pyworkflow import BETA
 from pyworkflow.object import Set, Integer
+import pyworkflow.utils.path as path
 import pyworkflow.protocol.params as params
-import tomo.objects as tomoObj
-from emclarity import Plugin
+from pwem.protocols import EMProtocol
 
+import tomo.objects as tomoObj
+from tomo.protocols import ProtTomoBase
+from tomo.objects import SetOfTiltSeries
+
+from emclarity import Plugin
+import imod.utils as utils
+from imod import Plugin as imodplugin
 
 PARAMS_FN = 'param.m'
 RAWTLT_FN = 'tilt.rawtlt'
+EMCLARITY_STACK_FOLDER = 'fixedStacks'
 
-class ProtEmclarityAutoAlign(Protocol):
+
+class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
     """
     This protocol will print hello world in the console
     IMPORTANT: Classes names should be unique, better prefix them
@@ -71,74 +79,81 @@ class ProtEmclarityAutoAlign(Protocol):
                       label='Input set of tilt-series.')
 
         form.addParam('beadDiameter', params.FloatParam,
-                      default=10e-9,
+                      default=5,
                       important=True,
-                      label='Bead diameter (m)',
+                      label='Bead diameter (nm)',
                       help='Bead diameter in meters (e.g. 10e-9). If 0, the beads are ignored during the alignment')
 
+        form.addParam('tiltAxis', params.FloatParam,
+                      allowsNull=True,
+                      expertLevel=params.LEVEL_ADVANCED,
+                      label='Tilt axis (degrees)',
+                      help='Tilt axis orientation in degrees.')
+
+        form.addSection('expert params')
         form.addParam('autoAli_max_resolution', params.FloatParam,
-                      default=18,
+                      allowsNull=True,
                       label='Max Resolution (Å)',
                       expertLevel=params.LEVEL_ADVANCED,
-                      help='Low-pass cutoff, in Å, used in alignment')
+                      help='Low-pass cutoff, in Å, used in alignment. A suggested value is 18 Å')
 
         form.addParam('autoAli_min_sampling_rate', params.FloatParam,
-                      default=10,
+                      allowsNull=True,
                       label='Min sampling rate (Å/px)',
                       expertLevel=params.LEVEL_ADVANCED,
-                      help='Maximum pixel size used for alignment, in Å per pixel')
+                      help='Maximum pixel size used for alignment, in Å per pixel. A suggested value is 10 Å ')
 
         form.addParam('autoAli_max_sampling_rate', params.FloatParam,
-                      default=3,
+                      allowsNull=True,
                       label='Max sampling rate (Å/px)',
                       expertLevel=params.LEVEL_ADVANCED,
-                      help='Minimum pixel size used for alignment, in Å per pixel')
+                      help='Minimum pixel size used for alignment, in Å per pixel. A suggested value is 3 Å')
 
         form.addParam('autoAli_iterations_per_bin', params.FloatParam,
-                      default=3.0,
+                      allowsNull=True,
                       label='Iterations per bin',
                       expertLevel=params.LEVEL_ADVANCED,
-                      help='The number of patch tracking iterations, for each bin')
+                      help='The number of patch tracking iterations, for each bin. A suggested value is 3 iterations')
 
         form.addParam('autoAli_n_iters_no_rotation', params.FloatParam,
-                      default=3.0,
+                      allowsNull=True,
                       label='n iters no rotation',
                       expertLevel=params.LEVEL_ADVANCED,
                       help='The number of patch tracking iterations, for each bin,'
-                           'before activating local alignments')
+                           'before activating local alignments. A suggested value is 3 iterations')
 
         form.addParam('autoAli_patch_size_factor', params.FloatParam,
-                      default=4.0,
+                      allowsNull=True,
                       label='Patch size factor',
                       expertLevel=params.LEVEL_ADVANCED,
                       help='Sets the size of the patches used for patch tracking.'
                            'Making this larger will result in more patches, and more local areas in later iterations,'
-                           'but may also decrease accuracy')
+                           'but may also decrease accuracy. A suggested Patch size factor is 4')
 
         form.addParam('autoAli_patch_tracking_border', params.FloatParam,
-                      default=64.0,
+                      allowsNull=True,
                       label='Patch tracking border',
                       expertLevel=params.LEVEL_ADVANCED,
-                      help='Number of pixels to trim off each edge in X and in Y')
+                      help='Number of pixels to trim off each edge in X and in Y. A suggested value is 64')
 
         form.addParam('autoAli_patch_overlap', params.FloatParam,
-                      default=0.5,
+                      allowsNull=True,
                       label='Patch overlap',
                       expertLevel=params.LEVEL_ADVANCED,
                       help='Fractional overlap in X and Y between patches that are tracked by correlation.'
-                           'This influences the number of patches')
+                           'This influences the number of patches. A suggested value is 0.5')
 
         form.addParam('autoAli_max_shift_in_angstroms', params.FloatParam,
-                      default=40.0,
+                      allowsNull=True,
                       label='Max shift (Å)',
                       expertLevel=params.LEVEL_ADVANCED,
-                      help='Maximum shifts allowed, in Å, for the patch tracking alignment')
+                      help='Maximum shifts allowed, in Å, for the patch tracking alignment. Suggested 40 Å')
 
         form.addParam('autoAli_max_shift_factor', params.FloatParam,
-                      default=1.0,
+                      allowsNull=True,
                       label='Max shift factor',
                       expertLevel=params.LEVEL_ADVANCED,
-                      help='The maximum shifts allowed are progressively reduced with the iterations i')
+                      help='The maximum shifts allowed are progressively reduced with the iterations i. A suggested factor is 1.0')
 
         form.addParam('autoAli_refine_on_beads', params.BooleanParam,
                       default=False,
@@ -146,63 +161,55 @@ class ProtEmclarityAutoAlign(Protocol):
                       expertLevel=params.LEVEL_ADVANCED,
                       help='Whether or not the patch tracking alignment should be refined using the gold beads.'
                            'This refinement makes the alignment significantly slower, but can substantially '
-                           'improve the quality of the alignment')
-
+                           'improve the quality of the alignment. Suggested as False')
 
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
         for ts in self.inputSetOfTiltSeries.get():
-            #self._insertFunctionStep(self.convertInputStep, ts.getObjId())
+            # self._insertFunctionStep(self.convertInputStep, ts.getObjId())
             self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
-        #     self._insertFunctionStep(self.generateOutputStackStep, ts.getObjId())
+            # self._insertFunctionStep(self.createOutputStep, ts.getObjId())
         #     if self.computeAlignment.get() == 0:
         #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
-        # self._insertFunctionStep(self.closeOutputSetsStep)
+        self._insertFunctionStep(self.closeOutputSetsStep)
 
     def autoAlignStep(self, tsObjId):
         """Compute the alignment of the tilt series"""
+
         ts = self.inputSetOfTiltSeries.get()[tsObjId]
         tsId = ts.getTsId()
-        extraPrefix = self._getExtraPath(tsId)
+        workingDir = self._getExtraPath(tsId)
 
-        import pyworkflow.utils.path as path
-        path.makePath(extraPrefix)
+        path.makePath(workingDir)
 
-        tsPath = os.path.join(extraPrefix, ts.getFirstItem().getFileName())
-        tmpPrefix = self._getTmpPath(tsId)
-        print(extraPrefix)
-        print(ts.getFirstItem().parseFileName())
-
-        #stack = os.path.join(extraPrefix, ts.getFirstItem().parseFileName())
         stack = os.path.abspath(ts.getFirstItem().getFileName())
-        #rawtlt = os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf"))
-        rawtlt = self._getExtraPath(RAWTLT_FN)
+        rawtlt = os.path.join(workingDir, RAWTLT_FN)
         ts.generateTltFile(rawtlt)
-        rotationAngle = ts.getAcquisition().getTiltAxisAngle()
+
+        if self.tiltAxis.hasValue():
+            rotationAngle = self.tiltAxis.get()
+        else:
+            rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
         sampling = ts.getSamplingRate()
-        param_file = self.create_parameters_file(sampling)
+        param_file = self.create_parameters_file(sampling, workingDir)
 
-        argsAutoAlign = "%s" %PARAMS_FN
-        argsAutoAlign += " %s" %stack
-        argsAutoAlign += " %s" %RAWTLT_FN
-        argsAutoAlign += " %s" %rotationAngle
+        argsAutoAlign = "%s" % PARAMS_FN
+        argsAutoAlign += " %s" % stack
+        argsAutoAlign += " %s" % RAWTLT_FN
+        argsAutoAlign += " %s" % rotationAngle
 
-        print(argsAutoAlign)
-        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign, cwd=self._getExtraPath())
+        Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign, cwd=self._getExtraPath(tsId))
 
+        xfFile = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + '.xf')
+        alifile = os.path.join(workingDir, tsId + '.ali')
+        argsImod = ' -xform %s %s %s' % (xfFile, stack, alifile)
 
-    def generateOutputStackStep(self):
-        """ Generate tilt-serie with the associated transform matrix """
-        ts = self.inputSetOfTiltSeries.get()
-        tsId = ts.getTsId()
+        imodplugin.runImod(self, 'newstack', argsImod)
 
-        extraPrefix = self._getExtraPath(tsId)
+        self.defineOutputObjects(self.inputSetOfTiltSeries.get())
 
-        self.getOutputSetOfTiltSeries(self.inputSetOfTiltSeries.get())
-
-        alignmentMatrix = utils.formatTransformationMatrix(
-            os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexg")))
+        alignmentMatrix = utils.formatTransformationMatrix(xfFile)
 
         newTs = tomoObj.TiltSeries(tsId=tsId)
         newTs.copyInfo(ts)
@@ -241,28 +248,73 @@ class ProtEmclarityAutoAlign(Protocol):
         self.outputSetOfTiltSeries.write()
 
         self._store()
-      
-    def create_parameters_file(self, sampling):
-        fn_params = self._getExtraPath(PARAMS_FN)
+
+
+    def defineOutputObjects(self, inputSet):
+        """ Method to generate output classes of set of tilt-series"""
+
+        if hasattr(self, "outputSetOfTiltSeries"):
+            self.outputSetOfTiltSeries.enableAppend()
+
+        else:
+            outputSetOfTiltSeries = self._createSetOfTiltSeries(suffix='aligned')
+
+            if isinstance(inputSet, SetOfTiltSeries):
+                outputSetOfTiltSeries.copyInfo(inputSet)
+                outputSetOfTiltSeries.setDim(inputSet.getDim())
+
+            elif isinstance(inputSet, SetOfTomograms):
+                outputSetOfTiltSeries.setAcquisition(inputSet.getAcquisition())
+                outputSetOfTiltSeries.setSamplingRate(inputSet.getSamplingRate())
+                outputSetOfTiltSeries.setDim(inputSet.getDim())
+
+            outputSetOfTiltSeries.setStreamState(Set.STREAM_OPEN)
+
+            self._defineOutputs(outputSetOfTiltSeries=outputSetOfTiltSeries)
+            self._defineSourceRelation(inputSet, outputSetOfTiltSeries)
+
+        return self.outputSetOfTiltSeries
+
+    def closeOutputSetsStep(self):
+        self.outputSetOfTiltSeries.setStreamState(Set.STREAM_CLOSED)
+        self.outputSetOfTiltSeries.write()
+        self._store()
+
+    def create_parameters_file(self, sampling, pathtoTS):
+
+        fn_params = os.path.join(pathtoTS, PARAMS_FN)
         f = open(fn_params, 'w')
+
         pixel_size = sampling * 1e-10
         f.write('nGPUs=1')
         f.write('\nnCpuCores=1')
         f.write('\nPIXEL_SIZE=' + str(pixel_size))
-        f.write('\nbeadDiameter=' + str(self.beadDiameter))
-        f.write('\nautoAli_max_resolution=' + str(float(self.autoAli_max_resolution)))
-        f.write('\nautoAli_min_sampling_rate=' + str(float(self.autoAli_min_sampling_rate)))
-        f.write('\nautoAli_max_sampling_rate=' + str(float(self.autoAli_max_sampling_rate)))
-        f.write('\nautoAli_iterations_per_bin=' + str(self.autoAli_iterations_per_bin))
-        f.write('\nautoAli_n_iters_no_rotation=' + str(self.autoAli_n_iters_no_rotation))
-        f.write('\nautoAli_patch_size_factor=' + str(self.autoAli_patch_size_factor))
-        f.write('\nautoAli_patch_tracking_border=' + str(self.autoAli_patch_tracking_border))
-        f.write('\nautoAli_patch_overlap=' + str(self.autoAli_patch_overlap))
-        f.write('\nautoAli_max_shift_in_angstroms=' + str(self.autoAli_max_shift_in_angstroms))
-        f.write('\nautoAli_max_shift_factor=' + str(self.autoAli_max_shift_factor))
-        f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads).lower())
+        f.write('\nbeadDiameter=' + str(float(self.beadDiameter) * 1e-9))
+        if self.autoAli_max_resolution.hasValue():
+            f.write('\nautoAli_max_resolution=' + str(float(self.autoAli_max_resolution)))
+        if self.autoAli_min_sampling_rate.hasValue():
+            f.write('\nautoAli_min_sampling_rate=' + str(float(self.autoAli_min_sampling_rate)))
+        if self.autoAli_max_sampling_rate.hasValue():
+            f.write('\nautoAli_max_sampling_rate=' + str(float(self.autoAli_max_sampling_rate)))
+        if self.autoAli_iterations_per_bin.hasValue():
+            f.write('\nautoAli_iterations_per_bin=' + str(self.autoAli_iterations_per_bin))
+        if self.autoAli_n_iters_no_rotation.hasValue():
+            f.write('\nautoAli_n_iters_no_rotation=' + str(self.autoAli_n_iters_no_rotation))
+        if self.autoAli_patch_size_factor.hasValue():
+            f.write('\nautoAli_patch_size_factor=' + str(self.autoAli_patch_size_factor))
+        if self.autoAli_patch_tracking_border.hasValue():
+            f.write('\nautoAli_patch_tracking_border=' + str(self.autoAli_patch_tracking_border))
+        if self.autoAli_patch_overlap.hasValue():
+            f.write('\nautoAli_patch_overlap=' + str(self.autoAli_patch_overlap))
+        if self.autoAli_max_shift_in_angstroms.hasValue():
+            f.write('\nautoAli_max_shift_in_angstroms=' + str(self.autoAli_max_shift_in_angstroms))
+        if self.autoAli_max_shift_factor.hasValue():
+            f.write('\nautoAli_max_shift_factor=' + str(self.autoAli_max_shift_factor))
+        if self.autoAli_refine_on_beads.hasValue():
+            f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads).lower())
         f.close()
         return fn_params
+
     # --------------------------- INFO functions -----------------------------------
     def _summary(self):
         """ Summarize what the protocol has done"""
