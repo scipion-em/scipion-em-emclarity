@@ -54,6 +54,9 @@ from imod import Plugin as imodplugin
 PARAMS_FN = 'param.m'
 RAWTLT_FN = 'tilt.rawtlt'
 EMCLARITY_STACK_FOLDER = 'fixedStacks'
+EXT_XF = '.xf'
+EXT_3DFIND_ALI = '_3dfind.ali'
+EXT_FIXED = '.fixed'
 
 
 class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
@@ -197,9 +200,10 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
 
         Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign, cwd=self._getExtraPath(tsId))
 
-        xfFile = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + '.xf')
-        alifile = os.path.join(workingDir, tsId + '.ali')
-        argsImod = ' -xform %s %s %s' % (xfFile, stack, alifile)
+        xfFile = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + EXT_XF)
+        alifile = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + EXT_3DFIND_ALI)
+        stackfixed = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + EXT_FIXED)
+        argsImod = ' -xform %s %s %s' % (xfFile, stackfixed, alifile)
 
         imodplugin.runImod(self, 'newstack', argsImod)
 
@@ -234,7 +238,8 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
                 newTi.setTransform(transform)
 
             newTi.setAcquisition(tiltImage.getAcquisition())
-            newTi.setLocation(tiltImage.getLocation())
+
+            newTi.setLocation(index + 1, alifile)
 
             newTs.append(newTi)
 
