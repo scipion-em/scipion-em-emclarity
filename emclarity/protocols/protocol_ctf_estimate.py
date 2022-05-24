@@ -219,33 +219,23 @@ class ProtEmclarityCtfEstimate(Protocol):
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
         for ts in self.inputSetOfTiltSeries.get():
-            #self._insertFunctionStep(self.convertInputStep, ts.getObjId())
             self._insertFunctionStep(self.ctf_estimateStep, ts.getObjId())
-        #     self._insertFunctionStep(self.generateOutputStackStep, ts.getObjId())
-        #     if self.computeAlignment.get() == 0:
-        #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
-        # self._insertFunctionStep(self.closeOutputSetsStep)
+        self._insertFunctionStep(self.closeOutputSetsStep)
 
     def ctf_estimateStep(self, tsObjId):
         """Compute the alignment of the tilt series"""
         ts = self.inputSetOfTiltSeries.get()[tsObjId]
         tsId = ts.getTsId()
-        extraPrefix = self._getExtraPath(tsId)
+        workingDir = self._getExtraPath(tsId)
 
         import pyworkflow.utils.path as path
-        path.makePath(extraPrefix)
+        path.makePath(workingDir)
 
-        tsPath = os.path.join(extraPrefix, ts.getFirstItem().getFileName())
-        tmpPrefix = self._getTmpPath(tsId)
-        print(extraPrefix)
+        print(workingDir)
         print(ts.getFirstItem().parseFileName())
 
-        #stack = os.path.join(extraPrefix, ts.getFirstItem().parseFileName())
-        #stack = os.path.abspath(ts.getFirstItem().getFileName())
-        #rawtlt = os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexf"))
         rawtlt = self._getExtraPath(RAWTLT_FN)
         ts.generateTltFile(rawtlt)
-        #rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
         sampling = ts.getSamplingRate()
         param_file = self.create_parameters_file(sampling)
@@ -256,57 +246,9 @@ class ProtEmclarityCtfEstimate(Protocol):
         print(argsCtf_estimate)
         Plugin.runEmClarity(self, 'ctf estimate', argsCtf_estimate, cwd=self._getExtraPath())
 
+    def simulateEmClarityProjectFolder(self, ts):
+        pass
 
-    def generateOutputStackStep(self):
-        """ Generate tilt-serie with the associated transform matrix """
-        ts = self.inputSetOfTiltSeries.get()
-        tsId = ts.getTsId()
-
-        extraPrefix = self._getExtraPath(tsId)
-
-        self.getOutputSetOfTiltSeries(self.inputSetOfTiltSeries.get())
-
-        alignmentMatrix = utils.formatTransformationMatrix(
-            os.path.join(extraPrefix, ts.getFirstItem().parseFileName(extension=".prexg")))
-
-        newTs = tomoObj.TiltSeries(tsId=tsId)
-        newTs.copyInfo(ts)
-
-        self.outputSetOfTiltSeries.append(newTs)
-
-        for index, tiltImage in enumerate(ts):
-            newTi = tomoObj.TiltImage()
-            newTi.copyInfo(tiltImage, copyId=True, copyTM=False)
-
-            if tiltImage.hasTransform():
-                transform = Transform()
-                previousTransform = tiltImage.getTransform().getMatrix()
-                newTransform = alignmentMatrix[:, :, index]
-                previousTransformArray = np.array(previousTransform)
-                newTransformArray = np.array(newTransform)
-                outputTransformMatrix = np.matmul(newTransformArray, previousTransformArray)
-                transform.setMatrix(outputTransformMatrix)
-                newTi.setTransform(transform)
-
-            else:
-                transform = Transform()
-                newTransform = alignmentMatrix[:, :, index]
-                newTransformArray = np.array(newTransform)
-                transform.setMatrix(newTransformArray)
-                newTi.setTransform(transform)
-
-            newTi.setAcquisition(tiltImage.getAcquisition())
-            newTi.setLocation(tiltImage.getLocation())
-
-            newTs.append(newTi)
-
-        newTs.write(properties=False)
-
-        self.outputSetOfTiltSeries.update(newTs)
-        self.outputSetOfTiltSeries.write()
-
-        self._store()
-      
     def create_parameters_file(self, sampling):
         fn_params = self._getExtraPath(PARAMS_FN)
         f = open(fn_params, 'w')
@@ -329,6 +271,7 @@ class ProtEmclarityCtfEstimate(Protocol):
         f.write('\ndoseSymmetricIncrement=' + str(self.doseSymmetricIncrement))
         f.write('\ndoseAtMinTilt=' + str(self.doseAtMinTilt))
         f.close()
+
         return fn_params
     # --------------------------- INFO functions -----------------------------------
     def _summary(self):

@@ -166,11 +166,7 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
     # --------------------------- STEPS functions ------------------------------
     def _insertAllSteps(self):
         for ts in self.inputSetOfTiltSeries.get():
-            # self._insertFunctionStep(self.convertInputStep, ts.getObjId())
             self._insertFunctionStep(self.autoAlignStep, ts.getObjId())
-            # self._insertFunctionStep(self.createOutputStep, ts.getObjId())
-        #     if self.computeAlignment.get() == 0:
-        #         self._insertFunctionStep(self.computeInterpolatedStackStep, ts.getObjId())
         self._insertFunctionStep(self.closeOutputSetsStep)
 
     def autoAlignStep(self, tsObjId):
@@ -192,7 +188,7 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
             rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
         sampling = ts.getSamplingRate()
-        param_file = self.create_parameters_file(sampling, workingDir)
+        self.create_parameters_file(sampling, workingDir)
 
         argsAutoAlign = "%s" % PARAMS_FN
         argsAutoAlign += " %s" % stack
@@ -282,8 +278,7 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
 
     def create_parameters_file(self, sampling, pathtoTS):
 
-        fn_params = os.path.join(pathtoTS, PARAMS_FN)
-        f = open(fn_params, 'w')
+        f = open(os.path.join(pathtoTS, PARAMS_FN), 'w')
 
         pixel_size = sampling * 1e-10
         f.write('nGPUs=1')
@@ -313,7 +308,7 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
         if self.autoAli_refine_on_beads.hasValue():
             f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads).lower())
         f.close()
-        return fn_params
+
 
     # --------------------------- INFO functions -----------------------------------
     def _summary(self):
