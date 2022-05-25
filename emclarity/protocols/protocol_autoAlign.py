@@ -331,23 +331,3 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
             f.write('\nautoAli_refine_on_beads=' + str(self.autoAli_refine_on_beads).lower())
         f.close()
 
-
-    # --------------------------- INFO functions -----------------------------------
-    def _summary(self):
-        """ Summarize what the protocol has done"""
-        summary = []
-
-        if self.isFinished():
-            summary.append("This protocol has printed *%s* %i times." % (self.message, self.times))
-        return summary
-
-    def _methods(self):
-        methods = []
-
-        if self.isFinished():
-            methods.append("%s has been printed in this run %i times." % (self.message, self.times))
-            if self.previousCount.hasPointer():
-                methods.append("Accumulated count from previous runs were %i."
-                               " In total, %s messages has been printed."
-                               % (self.previousCount, self.count))
-        return methods

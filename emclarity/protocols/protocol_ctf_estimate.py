@@ -234,29 +234,28 @@ class ProtEmclarityCtfEstimate(Protocol):
         print(workingDir)
         print(ts.getFirstItem().parseFileName())
 
-        tlt = os.path.join(pathToFixedStacks, 'tilt.tlt')
+        tlt = os.path.join(pathToFixedStacks, tsId+'.tlt')
         ts.generateTltFile(tlt)
-        xf = os.path.join(pathToFixedStacks, 'tilt.xf')
+        xf = os.path.join(pathToFixedStacks, tsId+'.xf')
         ts.writeXfFile(xf)
 
         stack = os.path.abspath(ts.getFirstItem().getFileName())
-        symbLinkToTS = os.path.join(workingDir, tsId+'.fixed')
+        symbLinkToTS = os.path.join(workingDir, 'fixedStacks', tsId+'.fixed')
         #relpathToTS = os.path.relpath(symbLinkToTS, workingDir)
 
         os.symlink(stack, symbLinkToTS)
 
         sampling = ts.getSamplingRate()
-        self.create_parameters_file(sampling)
+        self.create_parameters_file(sampling, workingDir)
 
         argsCtf_estimate = "%s" %PARAMS_FN
         argsCtf_estimate += " %s" % tsId
 
         print(argsCtf_estimate)
-        Plugin.runEmClarity(self, 'ctf estimate', argsCtf_estimate, cwd=self._getExtraPath())
+        Plugin.runEmClarity(self, 'ctf estimate', argsCtf_estimate, cwd=self._getExtraPath(tsId))
 
-    def create_parameters_file(self, sampling):
-        fn_params = self._getExtraPath(PARAMS_FN)
-        f = open(fn_params, 'w')
+    def create_parameters_file(self, sampling, workingDir):
+        f = open(os.path.join(workingDir, PARAMS_FN), 'w')
         pixel_size = sampling * 1e-10
         f.write('nGPUs=1')
         f.write('\nnCpuCores=1')
@@ -276,4 +275,3 @@ class ProtEmclarityCtfEstimate(Protocol):
         f.write('\ndoseSymmetricIncrement=' + str(self.doseSymmetricIncrement))
         f.write('\ndoseAtMinTilt=' + str(self.doseAtMinTilt))
         f.close()
-
