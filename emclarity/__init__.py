@@ -74,7 +74,6 @@ class Plugin(pwem.Plugin):
 
         environ.update(env_emC, position=Environ.BEGIN)
 
-        print(env_emC)
         return environ
 
     @classmethod
@@ -94,22 +93,15 @@ class Plugin(pwem.Plugin):
         # Get the command
         cmd = cls.getEmClarityCmd(program)
 
-        print('cwd = ', cwd)
-
         protocol.runJob(cmd, args, env=cls.getEnviron(), cwd=cwd,
                         numberOfMpi=1)
 
     @classmethod
     def getEmClarityCmd(cls, program):
         """ Composes an EmClarity command for a given program. """
-        # If absolute ... (then it is based on the config)
-        #if os.path.isabs(program):
-        #    cmd += ". " + cls.getHome("IMOD-linux.sh") + " && "
 
-        cmd = ". " + imodplugin.getImodEnv()#getHome("IMOD-linux.sh") + " && "
-        print('--------------------')
-        print(cmd)
-        print('--------------------')
+        cmd = ". " + imodplugin.getImodEnv()
+
         # Program to run
         program_path = cls._getProgram("emClarity_1_5_3_11_v19a")
 

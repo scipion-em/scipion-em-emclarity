@@ -56,7 +56,8 @@ RAWTLT_FN = 'tilt.rawtlt'
 EMCLARITY_STACK_FOLDER = 'fixedStacks'
 EXT_XF = '.xf'
 EXT_3DFIND_ALI = '_3dfind.ali'
-EXT_FIXED = '.fixed'
+EXT_ALIGNED = '_aligned'
+EXT_MRC = '.mrc'
 
 
 class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
@@ -173,15 +174,28 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
         self._insertFunctionStep(self.closeOutputSetsStep)
 
     def autoAlignStep(self, tsObjId):
-        """Compute the alignment of the tilt series"""
+        """Compute the alignment of the tilt series with autoAlign"""
 
         ts = self.inputSetOfTiltSeries.get()[tsObjId]
         tsId = ts.getTsId()
-        workingDir = self._getExtraPath(tsId)
 
+        # For each Tilt series a folder in extra is created. This folder will be the working directory of emclarity
+        # and a emclarity project will be created in this folder.
+        # It means, we create the folder extra/TS_001
+        # Inside extra/TS_001 emclarity will create the emclarity project folder extra/TS_001/fixedStacks
+        workingDir = self._getExtraPath(tsId)
         path.makePath(workingDir)
 
+        # simulate emclarity project folder
+        # emclarity requires that data will be located in ../fixedStack folder. For this reason a symbolic link
+        # to the data is created in this folder.
         stack = os.path.abspath(ts.getFirstItem().getFileName())
+        symbLinkToTS = os.path.join(workingDir, tsId+EXT_MRC)
+        relpathToTS = os.path.relpath(symbLinkToTS, workingDir)
+
+        os.symlink(stack, symbLinkToTS)
+
+        # Creation of the TLT file
         rawtlt = os.path.join(workingDir, RAWTLT_FN)
         ts.generateTltFile(rawtlt)
 
@@ -190,21 +204,23 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
         else:
             rotationAngle = ts.getAcquisition().getTiltAxisAngle()
 
+        # Defining the params of autoalign. Note that emclarity uses .m files (matlab) which contain all parameters
+        # In other words, the input of emclarity is m-file with the parameters of the algorithm (autoalign)
         sampling = ts.getSamplingRate()
         self.create_parameters_file(sampling, workingDir)
 
         argsAutoAlign = "%s" % PARAMS_FN
-        argsAutoAlign += " %s" % stack
+        argsAutoAlign += " %s" % relpathToTS
         argsAutoAlign += " %s" % RAWTLT_FN
         argsAutoAlign += " %s" % rotationAngle
 
         Plugin.runEmClarity(self, 'autoAlign', argsAutoAlign, cwd=self._getExtraPath(tsId))
 
         xfFile = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + EXT_XF)
-        alifile = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + EXT_3DFIND_ALI)
-        stackfixed = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + EXT_FIXED)
-        argsImod = ' -xform %s %s %s' % (xfFile, stackfixed, alifile)
+        alifile = os.path.join(workingDir, tsId + EXT_ALIGNED+EXT_MRC)
+        stackfixed = os.path.join(workingDir, EMCLARITY_STACK_FOLDER, tsId + '.fixed')
 
+        argsImod = ' -xform %s %s %s' % (xfFile, stackfixed, alifile)
         imodplugin.runImod(self, 'newstack', argsImod)
 
         self.defineOutputObjects(self.inputSetOfTiltSeries.get())
@@ -249,6 +265,7 @@ class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
         self.outputSetOfTiltSeries.write()
 
         self._store()
+
 
 
     def defineOutputObjects(self, inputSet):
