@@ -46,7 +46,6 @@ from emclarity import Plugin
 
 
 PARAMS_FN = 'param_ctf.m'
-RAWTLT_FN = 'tilt.rawtlt'
 
 class ProtEmclarityCtfEstimate(Protocol):
     """
@@ -220,7 +219,7 @@ class ProtEmclarityCtfEstimate(Protocol):
     def _insertAllSteps(self):
         for ts in self.inputSetOfTiltSeries.get():
             self._insertFunctionStep(self.ctf_estimateStep, ts.getObjId())
-        self._insertFunctionStep(self.closeOutputSetsStep)
+        #self._insertFunctionStep(self.closeOutputSetsStep)
 
     def ctf_estimateStep(self, tsObjId):
         """Compute the alignment of the tilt series"""
@@ -229,25 +228,31 @@ class ProtEmclarityCtfEstimate(Protocol):
         workingDir = self._getExtraPath(tsId)
 
         import pyworkflow.utils.path as path
-        path.makePath(workingDir)
+        pathToFixedStacks = os.path.join(workingDir,'fixedStacks')
+        path.makePath(pathToFixedStacks)
 
         print(workingDir)
         print(ts.getFirstItem().parseFileName())
 
-        rawtlt = self._getExtraPath(RAWTLT_FN)
-        ts.generateTltFile(rawtlt)
+        tlt = os.path.join(pathToFixedStacks, 'tilt.tlt')
+        ts.generateTltFile(tlt)
+        xf = os.path.join(pathToFixedStacks, 'tilt.xf')
+        ts.writeXfFile(xf)
+
+        stack = os.path.abspath(ts.getFirstItem().getFileName())
+        symbLinkToTS = os.path.join(workingDir, tsId+'.fixed')
+        #relpathToTS = os.path.relpath(symbLinkToTS, workingDir)
+
+        os.symlink(stack, symbLinkToTS)
 
         sampling = ts.getSamplingRate()
-        param_file = self.create_parameters_file(sampling)
+        self.create_parameters_file(sampling)
 
         argsCtf_estimate = "%s" %PARAMS_FN
-        argsCtf_estimate += " %s" %RAWTLT_FN
+        argsCtf_estimate += " %s" % tsId
 
         print(argsCtf_estimate)
         Plugin.runEmClarity(self, 'ctf estimate', argsCtf_estimate, cwd=self._getExtraPath())
-
-    def simulateEmClarityProjectFolder(self, ts):
-        pass
 
     def create_parameters_file(self, sampling):
         fn_params = self._getExtraPath(PARAMS_FN)
@@ -272,23 +277,3 @@ class ProtEmclarityCtfEstimate(Protocol):
         f.write('\ndoseAtMinTilt=' + str(self.doseAtMinTilt))
         f.close()
 
-        return fn_params
-    # --------------------------- INFO functions -----------------------------------
-    def _summary(self):
-        """ Summarize what the protocol has done"""
-        summary = []
-
-        if self.isFinished():
-            summary.append("This protocol has printed *%s* %i times." % (self.message, self.times))
-        return summary
-
-    def _methods(self):
-        methods = []
-
-        if self.isFinished():
-            methods.append("%s has been printed in this run %i times." % (self.message, self.times))
-            if self.previousCount.hasPointer():
-                methods.append("Accumulated count from previous runs were %i."
-                               " In total, %s messages has been printed."
-                               % (self.previousCount, self.count))
-        return methods
