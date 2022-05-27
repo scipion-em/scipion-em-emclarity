@@ -49,8 +49,7 @@ PARAMS_FN = 'param_ctf.m'
 
 class ProtEmclarityCtfEstimate(Protocol):
     """
-    This protocol will print hello world in the console
-    IMPORTANT: Classes names should be unique, better prefix them
+    This protocol will execute the protocol ctf estimate calling emClarity program
     """
     _label = 'ctf estimate'
 

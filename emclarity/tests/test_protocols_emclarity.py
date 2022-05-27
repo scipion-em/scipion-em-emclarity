@@ -33,6 +33,8 @@ import tomo
 
 from emclarity.protocols import ProtEmclarityAutoAlign
 
+from emclarity.protocols import ProtEmclarityCtfEstimate
+
 
 
 class TestEmClarityBase(BaseTest):
@@ -71,6 +73,29 @@ class TestEmClarityBase(BaseTest):
                                                     maxShiftInAngstroms=40.0,
                                                     maxShiftFactor=1.0,
                                                     refineOnBeads=False)
+
+        # Cambiar a ctf estimate
+        cls.protEmclarityCtfEstimate = cls._runCtfEstimate(inputSoTS=os.path.split(cls.inputSoTS)[0],
+                                                    VOLTAGE=300e3,
+                                                    Cs=2.7e-3,
+                                                    AMPCONT=0.10,
+                                                    SuperResolution=0,
+                                                    beadDiameter=10e-9,
+                                                    erase_beads_after_ctf=False,
+                                                    CUM_e_DOSE=60,
+                                                    doseAtMinTilt=1.46,
+                                                    oneOverCosineDose=0,
+                                                    startingAngle=30,
+                                                    startingDirection='neg',
+                                                    doseSymmetricIncrement=0,
+                                                    defCutOff=7e-10,
+                                                    defEstimate=3e-6,
+                                                    defWindow=1.5e-6,
+                                                    deltaZtolerance=50e-9,
+                                                    zShift=150e-9,
+                                                    ctfMaxNumberOfTiles=4000,
+                                                    ctfTileSize=680e-10,
+                                                    paddedSize=768)
 
     @classmethod
     def _runImportTiltSeries(cls, filesPath, pattern, voltage, magnification, sphericalAberration, amplitudeContrast,
@@ -117,7 +142,32 @@ class TestEmClarityBase(BaseTest):
         cls.launchProtocol(cls.protEmclarityAutoAlign)
         return cls.protEmclarityAutoAlign
 
+    @classmethod
+    def _runCtfEstimate(cls, inputSoTS, beadDiameter, maxResolution, minSamplingRate, maxSamplingRate, iterationsPerBin,
+                      nItersNoRotation, patchSizeFactor, patchTrackingBorder, patchOverlap, maxShiftInAngstroms,
+                      maxShiftFactor, refineOnBeads):
+
+        cls.protEmclarityCtfEstimate = cls.newProtocol(ProtEmclarityCtfEstimate,
+                                            inputSoTS=inputSoTS,
+                                            Vol=beadDiameter,
+                                            maxResolution=maxResolution,
+                                            minSamplingRate=minSamplingRate,
+                                            maxSamplingRate=maxSamplingRate,
+                                            iterationsPerBin=iterationsPerBin,
+                                            nItersNoRotation=nItersNoRotation,
+                                            patchSizeFactor=patchSizeFactor,
+                                            patchTrackingBorder=patchTrackingBorder,
+                                            patchOverlap=patchOverlap,
+                                            maxShiftInAngstroms=maxShiftInAngstroms,
+                                            maxShiftFactor=maxShiftFactor,
+                                            refineOnBeads=refineOnBeads)
+        cls.launchProtocol(cls.protEmclarityCtfEstimate)
+        return cls.protEmclarityCtfEstimate
+
     def test_importTSOutput(self):
         self.assertIsNotNone(self.protImportTS.outputTiltSeries)
     def test_emClarityAutoAlign(self):
         self.assertIsNotNone(self.protEmclarityAutoAlign.outputAlignTiltSeries)
+    def test_emClarityCtfEstimate(self):
+        # no se que devuelve si es outputAlignTiltSeries u otra cosa
+        self.assertIsNotNone(self.protEmclarityCtfEstimate.outputAlignTiltSeries)

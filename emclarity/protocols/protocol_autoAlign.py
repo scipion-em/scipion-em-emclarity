@@ -62,8 +62,7 @@ EXT_MRC = '.mrc'
 
 class ProtEmclarityAutoAlign(EMProtocol, ProtTomoBase):
     """
-    This protocol will print hello world in the console
-    IMPORTANT: Classes names should be unique, better prefix them
+    This protocol will execute the protocol autoAlign calling emClarity program
     """
     _label = 'autoAlign'
 
