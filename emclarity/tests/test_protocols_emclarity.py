@@ -74,7 +74,6 @@ class TestEmClarityBase(BaseTest):
                                                     maxShiftFactor=1.0,
                                                     refineOnBeads=False)
 
-        # Cambiar a ctf estimate
         cls.protEmclarityCtfEstimate = cls._runCtfEstimate(inputSoTS=os.path.split(cls.inputSoTS)[0],
                                                     VOLTAGE=300e3,
                                                     Cs=2.7e-3,
@@ -143,24 +142,33 @@ class TestEmClarityBase(BaseTest):
         return cls.protEmclarityAutoAlign
 
     @classmethod
-    def _runCtfEstimate(cls, inputSoTS, beadDiameter, maxResolution, minSamplingRate, maxSamplingRate, iterationsPerBin,
-                      nItersNoRotation, patchSizeFactor, patchTrackingBorder, patchOverlap, maxShiftInAngstroms,
-                      maxShiftFactor, refineOnBeads):
+    def _runCtfEstimate(cls, inputSoTS, VOLTAGE, Cs, AMPCONT, SuperResolution, beadDiameter,
+                      erase_beads_after_ctf, CUM_e_DOSE, doseAtMinTilt, oneOverCosineDose, startingAngle,
+                      startingDirection, doseSymmetricIncrement, defCutOff, defEstimate, defWindow,
+                      deltaZtolerance, zShift, ctfMaxNumberOfTiles, ctfTileSize, paddedSize):
 
         cls.protEmclarityCtfEstimate = cls.newProtocol(ProtEmclarityCtfEstimate,
                                             inputSoTS=inputSoTS,
-                                            Vol=beadDiameter,
-                                            maxResolution=maxResolution,
-                                            minSamplingRate=minSamplingRate,
-                                            maxSamplingRate=maxSamplingRate,
-                                            iterationsPerBin=iterationsPerBin,
-                                            nItersNoRotation=nItersNoRotation,
-                                            patchSizeFactor=patchSizeFactor,
-                                            patchTrackingBorder=patchTrackingBorder,
-                                            patchOverlap=patchOverlap,
-                                            maxShiftInAngstroms=maxShiftInAngstroms,
-                                            maxShiftFactor=maxShiftFactor,
-                                            refineOnBeads=refineOnBeads)
+                                            VOLTAGE=VOLTAGE,
+                                            Cs=Cs,
+                                            AMPCONT=AMPCONT,
+                                            SuperResolution=SuperResolution,
+                                            beadDiameter=beadDiameter,
+                                            erase_beads_after_ctf=erase_beads_after_ctf,
+                                            CUM_e_DOSE=CUM_e_DOSE,
+                                            doseAtMinTilt=doseAtMinTilt,
+                                            oneOverCosineDose=oneOverCosineDose,
+                                            startingAngle=startingAngle,
+                                            startingDirection=startingDirection,
+                                            doseSymmetricIncrement=doseSymmetricIncrement,
+                                            defCutOff=defCutOff,
+                                            defEstimate=defEstimate,
+                                            defWindow=defWindow,
+                                            deltaZtolerance=deltaZtolerance,
+                                            zShift=zShift,
+                                            ctfMaxNumberOfTiles=ctfMaxNumberOfTiles,
+                                            ctfTileSize=ctfTileSize,
+                                            paddedSize=paddedSize)
         cls.launchProtocol(cls.protEmclarityCtfEstimate)
         return cls.protEmclarityCtfEstimate
 
