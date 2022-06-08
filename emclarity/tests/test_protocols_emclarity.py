@@ -176,6 +176,3 @@ class TestEmClarityBase(BaseTest):
         self.assertIsNotNone(self.protImportTS.outputTiltSeries)
     def test_emClarityAutoAlign(self):
         self.assertIsNotNone(self.protEmclarityAutoAlign.outputAlignTiltSeries)
-    def test_emClarityCtfEstimate(self):
-        # no se que devuelve si es outputAlignTiltSeries u otra cosa
-        self.assertIsNotNone(self.protEmclarityCtfEstimate.outputAlignTiltSeries)
